@@ -1,10 +1,10 @@
 # SteamRecProject
 
-SteamRecProject is an AI-driven recommendation system designed to suggest new Steam games to players based on their existing library and playtime behavior. The system leverages both content-based and collaborative filtering techniques to provide personalized recommendations.
+**SteamRecProject** is an AI-driven recommendation system designed to suggest new Steam games to players based on their existing library and play behavior. The system leverages both content-based and collaborative filtering techniques to provide personalized recommendations.
 
-## Data Collection
+## 📂 Data Collection
 
-To populate the local game catalog, we use a custom scraper to fetch data from Steam. Use the following commands to execute the scraping pipeline:
+To populate the local game catalog, we use a custom Python scraper to fetch data directly from Steam. Use the following commands in your terminal to execute the scraping pipeline:
 
 1. **Fetch the list of all apps:**
    ```bash
@@ -15,7 +15,6 @@ To populate the local game catalog, we use a custom scraper to fetch data from S
 
 ### 2. REQUIREMENTS.md
 
-```markdown
 # Project Requirements: SteamRecProject
 
 ## 1. Project Summary
