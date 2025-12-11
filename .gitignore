@@ -1,0 +1,10 @@
+# Negeer environment variabelen (zeer belangrijk!)
+.env
+
+# Negeer Python cache (handig voor je scripts)
+__pycache__/
+*.pyc
+
+# Negeer build mappen van C#
+bin/
+obj/
