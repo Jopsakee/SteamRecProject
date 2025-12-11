@@ -15,6 +15,7 @@ public class ContentBasedRecommender
     private readonly double _volMin;
     private readonly double _volMax;
 
+    // Expose number of games loaded
     public int GameCount => _games.Count;
 
     // Match these to your Python W_SIM, W_REV, W_VOL
@@ -24,7 +25,7 @@ public class ContentBasedRecommender
 
     public ContentBasedRecommender(List<GameRecord> games)
     {
-        _games = games;
+        _games = games ?? throw new ArgumentNullException(nameof(games));
         _byAppId = games.ToDictionary(g => g.AppId, g => g);
 
         _featureBuilder = new FeatureBuilder();
@@ -38,6 +39,10 @@ public class ContentBasedRecommender
 
     public IReadOnlyList<GameRecord> Games => _games;
 
+    /// <summary>
+    /// Recommend games similar to a single reference game (by appId).
+    /// This is what the "By Game" page uses.
+    /// </summary>
     public List<(GameRecord game, double similarity, double overallScore)> RecommendSimilar(
         int appId,
         int topN = 10,
@@ -73,16 +78,7 @@ public class ContentBasedRecommender
         for (int i = 0; i < candidates.Count; i++)
         {
             var (g, sim, _) = candidates[i];
-            double revScore = g.ReviewScoreAdj;
-            double revVol = g.ReviewVolumeLog;
-
-            double normRev = Normalize(revScore, _revMin, _revMax, 0.5);
-            double normVol = Normalize(revVol, _volMin, _volMax, 0.0);
-
-            double overall = W_SIM * sim
-                           + W_REV * normRev
-                           + W_VOL * normVol;
-
+            double overall = ComputeOverallScore(sim, g);
             candidates[i] = (g, sim, overall);
         }
 
@@ -90,6 +86,85 @@ public class ContentBasedRecommender
             .OrderByDescending(c => c.overallScore)
             .Take(topN)
             .ToList();
+    }
+
+    /// <summary>
+    /// Recommend games based on a list of liked appIds (user library).
+    /// This is what the "By Profile" page uses.
+    /// </summary>
+    public List<(GameRecord game, double similarity, double overallScore)> RecommendForLiked(
+        IEnumerable<int> likedAppIds,
+        int topN = 20,
+        int maxCandidates = 500)
+    {
+        var likedSet = new HashSet<int>(likedAppIds ?? Enumerable.Empty<int>());
+
+        // Map liked appids to actual games we have
+        var likedGames = _games.Where(g => likedSet.Contains(g.AppId)).ToList();
+        if (likedGames.Count == 0)
+            throw new ArgumentException("None of the liked appids were found in the dataset.");
+
+        // Union of genres across liked games
+        var likedGenresUnion = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var g in likedGames)
+            likedGenresUnion.UnionWith(g.Genres);
+
+        // Average feature vector for liked games
+        int dim = likedGames[0].Features.Length;
+        var userVec = new double[dim];
+        foreach (var g in likedGames)
+        {
+            for (int i = 0; i < dim; i++)
+                userVec[i] += g.Features[i];
+        }
+        for (int i = 0; i < dim; i++)
+            userVec[i] /= likedGames.Count;
+
+        var candidates = new List<(GameRecord game, double similarity, double overallScore)>();
+
+        foreach (var g in _games)
+        {
+            if (likedSet.Contains(g.AppId)) continue;
+
+            // genre filter: must share at least one genre with ANY liked game (if any genres exist)
+            if (likedGenresUnion.Count > 0 && !g.Genres.Overlaps(likedGenresUnion))
+                continue;
+
+            double sim = CosineSimilarity(userVec, g.Features);
+            candidates.Add((g, sim, 0.0));
+        }
+
+        // top by similarity
+        candidates = candidates
+            .OrderByDescending(c => c.similarity)
+            .Take(maxCandidates)
+            .ToList();
+
+        // re-ranking with reviews
+        for (int i = 0; i < candidates.Count; i++)
+        {
+            var (g, sim, _) = candidates[i];
+            double overall = ComputeOverallScore(sim, g);
+            candidates[i] = (g, sim, overall);
+        }
+
+        return candidates
+            .OrderByDescending(c => c.overallScore)
+            .Take(topN)
+            .ToList();
+    }
+
+    private double ComputeOverallScore(double similarity, GameRecord g)
+    {
+        double revScore = g.ReviewScoreAdj;
+        double revVol = g.ReviewVolumeLog;
+
+        double normRev = Normalize(revScore, _revMin, _revMax, 0.5);
+        double normVol = Normalize(revVol, _volMin, _volMax, 0.0);
+
+        return W_SIM * similarity
+             + W_REV * normRev
+             + W_VOL * normVol;
     }
 
     private static double CosineSimilarity(double[] a, double[] b)

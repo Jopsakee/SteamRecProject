@@ -1,0 +1,84 @@
+@page
+@model SteamRec.Web.Pages.ProfileModel
+@{
+    ViewData["Title"] = "Profile-based Recommendations";
+}
+
+<div class="steam-container mt-4">
+    <h1 class="steam-title mb-3">Steam Profile Recommender</h1>
+    <p class="steam-subtitle">Enter your SteamID64 to get recommendations based on your library.</p>
+    <p class="text-muted">Loaded games in catalogue: @Model.TotalGames</p>
+
+    <form method="post" class="mb-4 steam-card p-3">
+        <div class="mb-3">
+            <label asp-for="SteamId" class="form-label">SteamID64</label>
+            <input asp-for="SteamId" class="form-control" placeholder="e.g. 7656119XXXXXXXXXX" />
+            <span class="form-text text-muted">
+                (You can find this on your Steam profile URL or via third-party sites.)
+            </span>
+        </div>
+        <button type="submit" class="btn steam-btn-primary">Load my library</button>
+    </form>
+
+    @if (Model.MatchedOwnedGames.Any())
+    {
+        <h2 class="steam-section-title">Matched Library Games</h2>
+        <div class="steam-card p-3 mb-4">
+            <p class="text-muted">
+                Showing games from your library that we have data for.
+                We use your most-played games to infer your taste.
+            </p>
+            <table class="table table-dark table-striped table-sm mb-0">
+                <thead>
+                    <tr>
+                        <th>AppID</th>
+                        <th>Name</th>
+                        <th>Playtime (hours)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var g in Model.MatchedOwnedGames.Take(25))
+                    {
+                        <tr>
+                            <td>@g.AppId</td>
+                            <td>@g.Name</td>
+                            <td>@g.PlaytimeHours.ToString("0.0")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+
+    @if (Model.Recommendations.Any())
+    {
+        <h2 class="steam-section-title">Recommended for You</h2>
+        <div class="steam-card p-3">
+            <table class="table table-dark table-striped table-sm mb-0">
+                <thead>
+                    <tr>
+                        <th>AppID</th>
+                        <th>Name</th>
+                        <th>Similarity</th>
+                        <th>Score</th>
+                        <th>Reviews</th>
+                        <th>Review Score (adj)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                @foreach (var r in Model.Recommendations)
+                {
+                    <tr>
+                        <td>@r.AppId</td>
+                        <td>@r.Name</td>
+                        <td>@r.Similarity.ToString("0.000")</td>
+                        <td>@r.OverallScore.ToString("0.000")</td>
+                        <td>@r.ReviewTotal</td>
+                        <td>@r.ReviewScoreAdj.ToString("0.000")</td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>

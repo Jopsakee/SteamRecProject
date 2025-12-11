@@ -35,7 +35,8 @@ public class FeatureBuilder
     public void BuildFeatures(List<GameRecord> games)
     {
         if (games == null || games.Count == 0)
-        throw new InvalidOperationException("No games loaded in FeatureBuilder.BuildFeatures. Check CSV path and GameDataLoader.");
+            throw new InvalidOperationException("No games loaded in FeatureBuilder.BuildFeatures. Check CSV path and GameDataLoader.");
+
         // 1) Build vocabularies
         var genreSet = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var tagSet = new HashSet<string>(StringComparer.OrdinalIgnoreCase);

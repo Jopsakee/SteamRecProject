@@ -1,22 +1,64 @@
-html {
-  font-size: 14px;
+.steam-body {
+    background-color: #171a21;
+    color: #c7d5e0;
 }
 
-@media (min-width: 768px) {
-  html {
-    font-size: 16px;
-  }
+.steam-navbar {
+    background-color: #171a21;
+    border-bottom: 1px solid #1b2838;
 }
 
-.btn:focus, .btn:active:focus, .btn-link.nav-link:focus, .form-control:focus, .form-check-input:focus {
-  box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem #258cfb;
+.steam-brand {
+    font-weight: 700;
+    letter-spacing: 0.05em;
 }
 
-html {
-  position: relative;
-  min-height: 100%;
+.steam-main {
+    padding-top: 20px;
+    padding-bottom: 40px;
 }
 
-body {
-  margin-bottom: 60px;
+.steam-container {
+    max-width: 1100px;
+    margin: 0 auto;
+}
+
+.steam-title {
+    color: #ffffff;
+}
+
+.steam-subtitle {
+    color: #afc2d5;
+}
+
+.steam-section-title {
+    color: #ffffff;
+    margin-bottom: 0.5rem;
+}
+
+.steam-card {
+    background-color: #1b2838;
+    border-radius: 4px;
+    box-shadow: 0 0 8px rgba(0, 0, 0, 0.6);
+    border: 1px solid #000000;
+}
+
+.steam-btn-primary {
+    background-color: #66c0f4;
+    border-color: #66c0f4;
+    color: #000;
+}
+
+.steam-btn-primary:hover {
+    background-color: #8fceff;
+    border-color: #8fceff;
+}
+
+/* Tables in dark cards */
+.table-dark {
+    --bs-table-bg: #1b2838;
+    --bs-table-striped-bg: #171a21;
+    --bs-table-striped-color: #c7d5e0;
+    --bs-table-hover-bg: #2a475e;
+    --bs-table-hover-color: #ffffff;
 }

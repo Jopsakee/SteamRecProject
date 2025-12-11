@@ -1,14 +1,20 @@
 using SteamRec.Core;
+using SteamRec.Web.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddRazorPages();
 
-// register recommender singleton
+// HttpClient for Steam profile service
+builder.Services.AddHttpClient<SteamProfileService>();
+
+// Register recommender singleton
 builder.Services.AddSingleton<ContentBasedRecommender>(sp =>
 {
     var env = sp.GetRequiredService<IWebHostEnvironment>();
 
+    // repo root / data / processed / games_clean.csv
+    // web project is at: repo root / csharp / SteamRec.Web
     var csvPath = Path.Combine(env.ContentRootPath, "..", "..", "data", "processed", "games_clean.csv");
     csvPath = Path.GetFullPath(csvPath);
 
@@ -32,6 +38,7 @@ app.UseHttpsRedirection();
 app.UseStaticFiles();
 app.UseRouting();
 app.UseAuthorization();
+
 app.MapRazorPages();
 
 app.Run();

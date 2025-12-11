@@ -25,7 +25,6 @@ public static class GameDataLoader
         using var reader = new StreamReader(csvPath);
         using var csv = new CsvReader(reader, config);
 
-        // Ensure header is read so TryGetField works correctly
         csv.Read();
         csv.ReadHeader();
 
@@ -56,7 +55,6 @@ public static class GameDataLoader
                 g.Categories = SplitSemicolon(g.CategoriesRaw);
                 g.Tags = SplitSemicolon(g.TagsRaw);
 
-                // Basic sanity: require at least appid and name
                 if (g.AppId > 0 && !string.IsNullOrWhiteSpace(g.Name))
                 {
                     games.Add(g);
