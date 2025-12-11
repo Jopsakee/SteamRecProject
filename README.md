@@ -11,6 +11,8 @@ To populate the local game catalog, we use a custom Python scraper to fetch data
    python -m src.data.fetch_app_list
 
    python -m src>data>fetch_appdetails
+
+   python -m src.data.build_game_features
 ---
 
 ### 2. REQUIREMENTS.md
