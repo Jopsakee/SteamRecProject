@@ -1,0 +1,305 @@
+1. Project summary
+
+We build a Steam game recommendation system that suggests new games to a player based on their existing Steam library and play behaviour.
+
+The system will first run locally using a CSV file with scraped Steam game data as the main catalog, and will later be deployed on Azure with a cloud database (MongoDB or Azure DB) and a web front-end.
+
+2. Target user
+
+- PC gamer with a Steam account.
+
+- The user has a Steam ID and at least a few owned games.
+
+3. Inputs & outputs
+
+Input
+
+	- Primary: Steam user ID.
+
+		- We query the Steam Web API to fetch:
+
+			- List of owned games,
+
+			- Optionally playtime per game.
+
+	- Optional input in the UI:
+
+		- Filters: preferred genres, price range, minimum review score.
+
+		- Optional manual selection of favourite games (for cold-start users with private profiles).
+
+Output
+
+	- A ranked list of N recommended games (e.g. top-10 or top-20) that:
+
+		- The user does not already own.
+
+		- Respect user filters (genre, price, review score).
+
+	- For each recommended game we show:
+
+		- Title, basic metadata (genres, price, review score).
+
+		- A short explanation such as “similar to games X and Y in your library” or “popular among users with similar tastes”.
+
+4. Architecture & technology
+
+Phase 1 – Local application
+
+- Data source
+
+	- Local CSV file containing all scraped Steam games and their metadata (appid, name, genres, tags, review score, price, release date, etc.).
+
+- Application
+
+	- Main app implemented in C# (requirement).
+
+	- Runs locally from VSCode (console or simple GUI / web).
+
+	- Uses C# client to call the Steam Web API for user library.
+
+- AI / ML
+
+	- Recommendation models implemented in C# using ML.NET.
+
+	- Python is optional and may be used for:
+
+		- Exploratory data analysis (EDA),
+
+		- Rapid prototyping of algorithms,
+
+		- Model comparison / sanity checks.
+
+Phase 2 – Azure deployment
+
+- Backend
+
+	- C# web API (ASP.NET Core or similar) hosted on Azure App Service / Azure Container Apps.
+
+	- Endpoint like /recommend?steamId=... that returns recommended games as JSON.
+
+- Database
+
+	-Move from CSV → MongoDB or Azure database (e.g. Azure Cosmos DB or Azure SQL) to store:
+
+		- Game catalog (metadata),
+
+		- Optional logs of recommendations and user feedback.
+
+- Frontend
+
+	- Simple web UI (C# / Razor, Blazor, or lightweight JS) served from Azure that:
+
+	- Lets user enter Steam ID + filters,
+
+	- Displays recommended games.
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+5. Artificial Intelligence – how we meet the expectations
+
+Rol in het project
+
+Design, implement and analyse AI algorithms for recommendation.
+
+AI-technieken
+
+We will select and implement at least two AI techniques for the recommender, for example:
+
+Content-based filtering
+
+Represent each game with features:
+
+Genres, tags (multi-hot vectors),
+
+Numeric features (review score, price, release year, popularity),
+
+Optional text features (simplified TF-IDF on descriptions).
+
+Use similarity measures (cosine similarity / k-nearest-neighbours) in C# to recommend games similar to the user’s liked/played games.
+
+Collaborative filtering / matrix factorisation
+
+Build a user–game interaction dataset (owned games / playtime).
+
+Train a matrix factorisation / recommendation model with ML.NET (e.g. one of its recommender trainers) to predict preference scores, and recommend top-N unseen games.
+
+C# / ML.NET implementation
+
+C# is the primary implementation language for all models in the final system.
+
+We use ML.NET to:
+
+Implement at least one model with its built-in algorithms,
+
+Optionally load/export models for deployment.
+
+Vergelijking eigen algoritmes vs libraries
+
+Implement a simple algorithm manually in C# (e.g. popularity or pure cosine similarity) and compare it with:
+
+A model trained via ML.NET.
+
+Compare performance and behaviour (e.g. precision@K, runtime, cold-start behaviour).
+
+Experimentation & analysis
+
+Experiment with:
+
+Different feature sets (with or without tags, with or without price),
+
+Different hyperparameters (number of latent factors, learning rate, etc.).
+
+Analyse results and justify our design choices in the report:
+
+Why we chose a given algorithm as our main model,
+
+Trade-offs between accuracy, complexity and explainability.
+
+6. ML & Forecasting – how we meet the expectations
+
+Rol in het project
+
+Choice, application and explanation of ML methods for recommender systems.
+
+Data-analyse
+
+Use Python and/or C# for:
+
+Inspecting the scraped Steam dataset and Steam user interaction data.
+
+Selection and preprocessing of features:
+
+Cleaning missing / inconsistent values (garbage in = garbage out),
+
+Filtering out extremely rare games / inactive users,
+
+Scaling / encoding features where needed.
+
+ML-pipeline
+
+We set up a clear ML-pipeline (documented in code + report):
+
+Data splitting
+
+Train/validation/test splits (e.g. 70/15/15), or time-based splits if timestamps are available.
+
+Model training and cross-validation
+
+Use ML.NET pipelines for:
+
+Feature engineering steps,
+
+Model fitting.
+
+Optionally use cross-validation where supported or manual K-fold procedure.
+
+Hyperparameter optimisation
+
+Try several configurations (e.g. number of neighbours, rank for matrix factorisation, regularisation parameters).
+
+Select best configuration based on validation metrics.
+
+Evaluatie van resultaten
+
+Evaluate recommendation quality using metrics such as:
+
+Precision@K, Recall@K, HitRate@K, NDCG@K for top-N recommendations.
+
+If we predict ratings / scores: MAE and/or RMSE.
+
+Present results in tables and plots, comparing:
+
+Baseline (popularity),
+
+Content-based model,
+
+Collaborative filtering / ML.NET model,
+
+Any hybrid combination.
+
+Forecasting / time-aspect (optioneel maar vermeld)
+
+If data permits (e.g. ownership/usage over time), we explore a simple forecasting-based angle, such as:
+
+Predicting future popularity of games or seasonal trends (e.g. games that tend to spike during holidays).
+
+Using this forecast to adjust recommendation scores.
+
+At minimum, we discuss in the report how forecasting could be integrated into the recommender.
+
+Visualisatie
+
+Visualise:
+
+Data distributions (number of games per user, popularity per game),
+
+Performance metrics (bar charts of precision@K, etc.),
+
+Any time-based patterns if forecasting is used.
+
+7. Hacking AI Systems – how we meet the expectations
+
+Rol in het project
+
+Determine the security needs of the project.
+
+Test the robustness and security of the recommender system.
+
+Security & sensitivity analysis
+
+Identify which parts of the application and data are sensitive:
+
+User identifiers (Steam IDs), access tokens / API keys,
+
+Game preference data, logs of recommendations,
+
+Model parameters and training data.
+
+Analyse how these could be misused or manipulated.
+
+Relevant attack techniques
+
+Investigate potential attacks on our system, including:
+
+Data poisoning (attackers manipulating training data to push their own games).
+
+Model evasion / adversarial queries (querying the model in specific ways).
+
+Privacy issues (leaking a user’s game preferences or private profile details).
+
+Abuse of the API (rate limiting / denial of service).
+
+Document which types of attacks are most realistic for our architecture.
+
+Evaluatie van gevoeligheid in verschillende lagen
+
+Evaluate vulnerabilities in:
+
+Infrastructure (Azure configuration, network exposure, secrets management),
+
+Application / logical layer (input validation, authentication/authorisation),
+
+Model layer (how robust is the recommender to malicious data),
+
+Supply chain (dependencies like ML.NET, libraries, container images).
+
+Incident preparation
+
+Define how we would detect and respond to incidents, e.g.:
+
+Monitoring abnormal API usage,
+
+Detecting suspicious changes in recommendation behaviour,
+
+Procedures for rolling back a poisoned model.
+
+Rapportage
+
+Deliver a short security report as part of the project:
+
+Identified vulnerabilities,
+
+Attack scenarios,
+
+Proposed mitigations (e.g. input validation, limiting sources of training data, rate limiting, secret storage, logging & monitoring).
