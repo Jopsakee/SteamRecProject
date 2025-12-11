@@ -1,4 +1,4 @@
-from typing import List, Any
+from typing import List, Any, Dict
 
 import numpy as np
 import pandas as pd
@@ -28,38 +28,82 @@ def main():
     )
     games["release_year"] = games["release_date_parsed"].dt.year
 
-    # Price: assume price_final is in cents (your EDA should confirm).
-    # If it's already in euros/dollars, change "/ 100.0" to just "= games['price_final']".
+    # Price: assume price_final is in cents (adjust if your EDA says otherwise)
     games["price_eur"] = games["price_final"] / 100.0
     games.loc[games["is_free"] == True, "price_eur"] = 0.0
 
-    # Make sure boolean columns are 0/1
-    for col in ["is_free"]:
-        if col in games.columns:
-            games[col] = games[col].fillna(False).astype(int)
-        else:
-            games[col] = 0
+    # is_free as 0/1
+    if "is_free" in games.columns:
+        games["is_free"] = games["is_free"].fillna(False).astype(int)
+    else:
+        games["is_free"] = 0
 
-    # NUMERIC FEATURES (secondary importance vs genres/categories)
-    # These are things a typical gamer might care about indirectly:
-    # - rough price
-    # - release year (old-school vs modern)
-    # - age rating
-    # - critic score
+    # ---- Merge review summaries (from fetch_reviews.py) ----
+    reviews_path = PROCESSED_DIR / "reviews_summary.csv"
+    if reviews_path.exists():
+        print(f"Merging review summaries from {reviews_path} …")
+        reviews = pd.read_csv(reviews_path)
+        games = games.merge(reviews, on="appid", how="left")
+    else:
+        print("WARNING: reviews_summary.csv not found; filling review fields with 0.")
+        games["review_positive"] = 0
+        games["review_negative"] = 0
+        games["review_total"] = 0
+        games["review_ratio"] = 0.0
+
+    # For games with no reviews: ratio as 0.5 (neutral-ish), volume 0
+    games["review_total"] = games["review_total"].fillna(0).astype(int)
+    games["review_ratio"] = games["review_ratio"].fillna(0.5)
+
+    # Log volume to avoid huge ranges; +1 to avoid log(0)
+    games["review_volume_log"] = np.log10(games["review_total"] + 1)
+
+    # ---- Bayesian-smoothed review score (review_score_adj) ----
+    # global mean ratio across all games with at least 1 review
+    mask_has_reviews = games["review_total"] > 0
+    if mask_has_reviews.any():
+        total_pos_global = (
+            games.loc[mask_has_reviews, "review_positive"].sum()
+        )
+        total_rev_global = (
+            games.loc[mask_has_reviews, "review_total"].sum()
+        )
+        global_mean_ratio = (
+            total_pos_global / float(total_rev_global)
+            if total_rev_global > 0
+            else 0.5
+        )
+    else:
+        global_mean_ratio = 0.5
+
+    # prior strength: how many "virtual reviews" we assume
+    m = 500.0
+
+    n = games["review_total"].astype(float)
+    r = games["review_ratio"].astype(float)
+
+    games["review_score_adj"] = (n / (n + m)) * r + (m / (n + m)) * global_mean_ratio
+
+    # NUMERIC FEATURES
+    # Things a normal gamer implicitly cares about:
+    # - review_score_adj (quality, adjusted for volume)
+    # - review_volume_log (confidence in that score)
+    # - price, release year, age rating, is_free, critic score
     numeric_cols = [
         "price_eur",
         "metacritic_score",
         "release_year",
         "required_age",
         "is_free",
+        "review_score_adj",
+        "review_volume_log",
     ]
-    # Ensure all exist and fill missing
     for col in numeric_cols:
         if col not in games.columns:
             games[col] = 0
     games[numeric_cols] = games[numeric_cols].fillna(0)
 
-    # MULTI-LABEL: genres and categories (highest importance)
+    # MULTI-LABEL: genres and categories (dominant signal)
     games["genres_list"] = games["genres"].apply(split_semicolon)
     games["categories_list"] = games["categories"].apply(split_semicolon)
 
@@ -78,17 +122,33 @@ def main():
     numeric_matrix = scaler.fit_transform(games[numeric_cols].values)
     numeric_feature_names = numeric_cols
 
-    # ---------- WEIGHTING ----------
-    # We want:
-    #   genres  >  categories  >  numeric
-    NUMERIC_WEIGHT = 1.0
+    # ---------- PER-FEATURE WEIGHTING WITHIN NUMERIC ----------
+    col_to_idx: Dict[str, int] = {
+        name: idx for idx, name in enumerate(numeric_cols)
+    }
+
+    # Base weight for all numeric features
+    NUMERIC_BASE = 1.0
+    numeric_matrix *= NUMERIC_BASE
+
+    # Strong weight for adjusted review score
+    if "review_score_adj" in col_to_idx:
+        numeric_matrix[:, col_to_idx["review_score_adj"]] *= 3.0
+
+    # Medium-strong weight for review volume (lots of reviews = more trustworthy)
+    if "review_volume_log" in col_to_idx:
+        numeric_matrix[:, col_to_idx["review_volume_log"]] *= 2.0
+    # ---------------------------------------------------------
+
+    # ---------- BLOCK WEIGHTS ----------
+    # Genres > categories > numeric (which already emphasizes review features)
     GENRE_WEIGHT = 2.0
     CAT_WEIGHT = 1.5
+    # numeric is effectively 1.0 (NUMERIC_BASE)
+    # -----------------------------------
 
-    numeric_matrix = numeric_matrix * NUMERIC_WEIGHT
     genres_matrix = genres_matrix * GENRE_WEIGHT
     cats_matrix = cats_matrix * CAT_WEIGHT
-    # -------------------------------
 
     # Combine all features
     X = np.hstack([numeric_matrix, genres_matrix, cats_matrix])
@@ -99,7 +159,7 @@ def main():
     print(f"# genre features:     {len(genre_feature_names)}")
     print(f"# category features:  {len(cat_feature_names)}")
 
-    # Save a cleaned games table for general use (and for C# side later)
+    # Save cleaned games table (for Python + C# side)
     clean_cols = [
         "appid",
         "name",
@@ -111,6 +171,11 @@ def main():
         "is_free",
         "genres",
         "categories",
+        "review_positive",
+        "review_negative",
+        "review_total",
+        "review_ratio",
+        "review_score_adj",
     ]
     clean_cols = [c for c in clean_cols if c in games.columns]
     games_clean = games[clean_cols].copy()

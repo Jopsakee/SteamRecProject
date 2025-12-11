@@ -7,6 +7,7 @@
 To populate the local game catalog, we use a custom Python scraper to fetch data directly from Steam. Use the following commands in your terminal to execute the scraping pipeline:
 
 1. **Fetch the list of all apps:**
+   
    Fill app_list.csv & app_list.json:
    ```bash
    python -m src.data.fetch_app_list
@@ -14,9 +15,9 @@ To populate the local game catalog, we use a custom Python scraper to fetch data
 
    Fetch app details and fill appdetails_raw.jsonl:
    ```bash
-   python -m src>data>fetch_appdetails
+   python -m src.data.fetch_appdetails
    ```
-   
+
    Fill games.csv with appdetails_raw entries:
    ```bash
    python -m src.data.build_game_features
