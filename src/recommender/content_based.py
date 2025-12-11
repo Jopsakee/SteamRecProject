@@ -77,9 +77,9 @@ class ContentBasedRecommender:
         self.model.fit(self.X)
 
         # Re-ranking weights
-        self.W_SIM = 1.0      # similarity weight
-        self.W_REV = 0.7    # adjusted review score weight
-        self.W_VOL = 1.3      # review volume weight
+        self.W_SIM = 3.0    # similarity weight
+        self.W_REV = 0.8    # adjusted review score weight
+        self.W_VOL = 0.9      # review volume weight
 
     # ---------- Internal helpers ----------
 

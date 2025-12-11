@@ -59,15 +59,10 @@ def main():
     games["review_volume_log"] = np.log10(games["review_total"] + 1)
 
     # ---- Bayesian-smoothed review score (review_score_adj) ----
-    # global mean ratio across all games with at least 1 review
     mask_has_reviews = games["review_total"] > 0
     if mask_has_reviews.any():
-        total_pos_global = (
-            games.loc[mask_has_reviews, "review_positive"].sum()
-        )
-        total_rev_global = (
-            games.loc[mask_has_reviews, "review_total"].sum()
-        )
+        total_pos_global = games.loc[mask_has_reviews, "review_positive"].sum()
+        total_rev_global = games.loc[mask_has_reviews, "review_total"].sum()
         global_mean_ratio = (
             total_pos_global / float(total_rev_global)
             if total_rev_global > 0
@@ -76,19 +71,26 @@ def main():
     else:
         global_mean_ratio = 0.5
 
-    # prior strength: how many "virtual reviews" we assume
-    m = 500.0
+    m = 500.0  # prior strength
 
     n = games["review_total"].astype(float)
     r = games["review_ratio"].astype(float)
 
     games["review_score_adj"] = (n / (n + m)) * r + (m / (n + m)) * global_mean_ratio
 
+    # ---- Merge user tags from SteamSpy (from fetch_tags.py) ----
+    tags_path = PROCESSED_DIR / "tags_summary.csv"
+    if tags_path.exists():
+        print(f"Merging user tags from {tags_path} …")
+        tags_df = pd.read_csv(tags_path)
+        games = games.merge(tags_df, on="appid", how="left")
+    else:
+        print("WARNING: tags_summary.csv not found; filling tags with ''.")
+        games["tags"] = ""
+
+    games["tags"] = games["tags"].fillna("")
+
     # NUMERIC FEATURES
-    # Things a normal gamer implicitly cares about:
-    # - review_score_adj (quality, adjusted for volume)
-    # - review_volume_log (confidence in that score)
-    # - price, release year, age rating, is_free, critic score
     numeric_cols = [
         "price_eur",
         "metacritic_score",
@@ -103,9 +105,10 @@ def main():
             games[col] = 0
     games[numeric_cols] = games[numeric_cols].fillna(0)
 
-    # MULTI-LABEL: genres and categories (dominant signal)
+    # MULTI-LABEL: genres, categories, user tags
     games["genres_list"] = games["genres"].apply(split_semicolon)
     games["categories_list"] = games["categories"].apply(split_semicolon)
+    games["tags_list"] = games["tags"].apply(split_semicolon)
 
     # One-hot encode genres
     mlb_genres = MultiLabelBinarizer()
@@ -117,6 +120,20 @@ def main():
     cats_matrix = mlb_cats.fit_transform(games["categories_list"])
     cat_feature_names = [f"cat_{c}" for c in mlb_cats.classes_]
 
+    # One-hot encode user tags
+    mlb_tags = MultiLabelBinarizer()
+    tags_matrix = mlb_tags.fit_transform(games["tags_list"])
+    tag_feature_names = [f"tag_{t}" for t in mlb_tags.classes_]
+
+    # Optionally drop ultra-rare tags (appear in very few games) to reduce noise
+    min_tag_games = 10  # only keep tags used by at least 10 games
+    tag_counts = tags_matrix.sum(axis=0)
+    keep_mask = tag_counts >= min_tag_games
+    tags_matrix = tags_matrix[:, keep_mask]
+    tag_feature_names = [
+        name for name, keep in zip(tag_feature_names, keep_mask) if keep
+    ]
+
     # Scale numeric features
     scaler = StandardScaler()
     numeric_matrix = scaler.fit_transform(games[numeric_cols].values)
@@ -127,36 +144,37 @@ def main():
         name: idx for idx, name in enumerate(numeric_cols)
     }
 
-    # Base weight for all numeric features
     NUMERIC_BASE = 1.0
     numeric_matrix *= NUMERIC_BASE
 
-    # Strong weight for adjusted review score
     if "review_score_adj" in col_to_idx:
-        numeric_matrix[:, col_to_idx["review_score_adj"]] *= 3.0
-
-    # Medium-strong weight for review volume (lots of reviews = more trustworthy)
+        numeric_matrix[:, col_to_idx["review_score_adj"]] *= 2.0
     if "review_volume_log" in col_to_idx:
-        numeric_matrix[:, col_to_idx["review_volume_log"]] *= 2.0
+        numeric_matrix[:, col_to_idx["review_volume_log"]] *= 1.5
     # ---------------------------------------------------------
 
     # ---------- BLOCK WEIGHTS ----------
-    # Genres > categories > numeric (which already emphasizes review features)
-    GENRE_WEIGHT = 2.0
-    CAT_WEIGHT = 1.5
-    # numeric is effectively 1.0 (NUMERIC_BASE)
-    # -----------------------------------
+    # We now have: numeric | genres | tags | categories
+    # Tags capture subgenres like "Roguelike", "Bullet Hell", etc.
+    GENRE_WEIGHT = 1.2
+    TAG_WEIGHT = 4.0    # slightly stronger than genres for nuance
+    CAT_WEIGHT = 1.2
 
     genres_matrix = genres_matrix * GENRE_WEIGHT
+    tags_matrix = tags_matrix * TAG_WEIGHT
     cats_matrix = cats_matrix * CAT_WEIGHT
+    # -----------------------------------
 
     # Combine all features
-    X = np.hstack([numeric_matrix, genres_matrix, cats_matrix])
-    feature_names = numeric_feature_names + genre_feature_names + cat_feature_names
+    X = np.hstack([numeric_matrix, genres_matrix, tags_matrix, cats_matrix])
+    feature_names = (
+        numeric_feature_names + genre_feature_names + tag_feature_names + cat_feature_names
+    )
 
     print(f"Feature matrix shape: {X.shape}")
     print(f"# numeric features:   {len(numeric_feature_names)}")
     print(f"# genre features:     {len(genre_feature_names)}")
+    print(f"# tag features:       {len(tag_feature_names)}")
     print(f"# category features:  {len(cat_feature_names)}")
 
     # Save cleaned games table (for Python + C# side)
@@ -171,6 +189,7 @@ def main():
         "is_free",
         "genres",
         "categories",
+        "tags",
         "review_positive",
         "review_negative",
         "review_total",
