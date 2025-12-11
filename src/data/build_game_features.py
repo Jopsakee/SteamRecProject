@@ -1,4 +1,4 @@
-from typing import List, Dict, Any
+from typing import List, Any
 
 import numpy as np
 import pandas as pd
@@ -18,53 +18,57 @@ def main():
     print(f"Loading games from {games_path} …")
     games = pd.read_csv(games_path)
 
-    # Filter to real games only
+    # Keep real games only
     games = games[games["type"] == "game"].copy()
     games = games.dropna(subset=["name"])
 
-    # Parse release year
+    # Parse release_year from release_date
     games["release_date_parsed"] = pd.to_datetime(
         games["release_date"], errors="coerce"
     )
     games["release_year"] = games["release_date_parsed"].dt.year
 
-    # Price in EUR-like units (if it's in cents)
+    # Price: assume price_final is in cents (your EDA should confirm).
+    # If it's already in euros/dollars, change "/ 100.0" to just "= games['price_final']".
     games["price_eur"] = games["price_final"] / 100.0
-    # For free games, ensure price_eur is 0
     games.loc[games["is_free"] == True, "price_eur"] = 0.0
 
-    # Binary flags as int
-    for col in ["is_free", "windows", "mac", "linux", "coming_soon"]:
+    # Make sure boolean columns are 0/1
+    for col in ["is_free"]:
         if col in games.columns:
             games[col] = games[col].fillna(False).astype(int)
+        else:
+            games[col] = 0
 
-    # Select numeric feature columns
+    # NUMERIC FEATURES (secondary importance vs genres/categories)
+    # These are things a typical gamer might care about indirectly:
+    # - rough price
+    # - release year (old-school vs modern)
+    # - age rating
+    # - critic score
     numeric_cols = [
         "price_eur",
-        "discount_percent",
         "metacritic_score",
-        "achievements_total",
-        "required_age",
         "release_year",
+        "required_age",
         "is_free",
-        "windows",
-        "mac",
-        "linux",
     ]
-
-    # Some numeric fields may be missing; fill with sensible defaults
+    # Ensure all exist and fill missing
+    for col in numeric_cols:
+        if col not in games.columns:
+            games[col] = 0
     games[numeric_cols] = games[numeric_cols].fillna(0)
 
-    # Multi-label encode genres and categories
+    # MULTI-LABEL: genres and categories (highest importance)
     games["genres_list"] = games["genres"].apply(split_semicolon)
     games["categories_list"] = games["categories"].apply(split_semicolon)
 
-    # MultiLabelBinarizer for genres
+    # One-hot encode genres
     mlb_genres = MultiLabelBinarizer()
     genres_matrix = mlb_genres.fit_transform(games["genres_list"])
     genre_feature_names = [f"genre_{g}" for g in mlb_genres.classes_]
 
-    # MultiLabelBinarizer for categories
+    # One-hot encode categories
     mlb_cats = MultiLabelBinarizer()
     cats_matrix = mlb_cats.fit_transform(games["categories_list"])
     cat_feature_names = [f"cat_{c}" for c in mlb_cats.classes_]
@@ -72,52 +76,57 @@ def main():
     # Scale numeric features
     scaler = StandardScaler()
     numeric_matrix = scaler.fit_transform(games[numeric_cols].values)
+    numeric_feature_names = numeric_cols
 
-    numeric_feature_names = numeric_cols  # already descriptive
+    # ---------- WEIGHTING ----------
+    # We want:
+    #   genres  >  categories  >  numeric
+    NUMERIC_WEIGHT = 1.0
+    GENRE_WEIGHT = 2.0
+    CAT_WEIGHT = 1.5
 
-    # Concatenate all features horizontally
-    feature_matrix = np.hstack([numeric_matrix, genres_matrix, cats_matrix])
+    numeric_matrix = numeric_matrix * NUMERIC_WEIGHT
+    genres_matrix = genres_matrix * GENRE_WEIGHT
+    cats_matrix = cats_matrix * CAT_WEIGHT
+    # -------------------------------
+
+    # Combine all features
+    X = np.hstack([numeric_matrix, genres_matrix, cats_matrix])
     feature_names = numeric_feature_names + genre_feature_names + cat_feature_names
 
-    print(f"Feature matrix shape: {feature_matrix.shape}")
-    print(f"# numeric features: {len(numeric_feature_names)}")
-    print(f"# genre features:   {len(genre_feature_names)}")
-    print(f"# category features:{len(cat_feature_names)}")
+    print(f"Feature matrix shape: {X.shape}")
+    print(f"# numeric features:   {len(numeric_feature_names)}")
+    print(f"# genre features:     {len(genre_feature_names)}")
+    print(f"# category features:  {len(cat_feature_names)}")
 
-    # Save a cleaned games table (for general use, C# side, etc.)
-    clean_games_path = PROCESSED_DIR / "games_clean.csv"
-    cols_to_keep = [
+    # Save a cleaned games table for general use (and for C# side later)
+    clean_cols = [
         "appid",
         "name",
         "release_date",
         "release_year",
         "price_eur",
-        "discount_percent",
         "metacritic_score",
-        "achievements_total",
         "required_age",
         "is_free",
-        "windows",
-        "mac",
-        "linux",
         "genres",
         "categories",
     ]
-    # Only keep existing columns
-    cols_to_keep = [c for c in cols_to_keep if c in games.columns]
-    games_clean = games[cols_to_keep].copy()
-    games_clean.to_csv(clean_games_path, index=False)
-    print(f"Wrote cleaned games table to {clean_games_path}")
+    clean_cols = [c for c in clean_cols if c in games.columns]
+    games_clean = games[clean_cols].copy()
+    clean_path = PROCESSED_DIR / "games_clean.csv"
+    games_clean.to_csv(clean_path, index=False)
+    print(f"Wrote cleaned games table to {clean_path}")
 
-    # Save feature matrix & metadata as NumPy npz
+    # Save feature matrix & metadata
     features_path = PROCESSED_DIR / "game_features.npz"
     np.savez_compressed(
         features_path,
-        X=feature_matrix,
+        X=X,
         appid=games["appid"].values,
         feature_names=np.array(feature_names),
     )
-    print(f"Wrote feature matrix + metadata to {features_path}")
+    print(f"Wrote features to {features_path}")
 
 
 if __name__ == "__main__":
