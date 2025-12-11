@@ -1,0 +1,79 @@
+﻿@page
+@model SteamRec.Web.Pages.IndexModel
+@{
+    ViewData["Title"] = "Steam Game Recommender";
+}
+
+<div class="container mt-4">
+    <h1 class="mb-3">Steam Game Recommender</h1>
+    <p class="text-muted">Search for a game you like and get similar recommendations.</p>
+    <p class="text-muted">
+    Loaded games: @Model.TotalGames
+    </p>
+
+
+    <!-- Search form -->
+    <form method="post" asp-page-handler="Search" class="mb-3">
+        <div class="input-group">
+            <input asp-for="SearchTerm" class="form-control" placeholder="Type a game name (e.g. Risk of Rain)" />
+            <button type="submit" class="btn btn-primary">Search</button>
+        </div>
+        <span asp-validation-for="SearchTerm" class="text-danger"></span>
+    </form>
+
+    <!-- If we have search results, show dropdown + Recommend button -->
+    @if (Model.SearchResults.Any())
+    {
+        <form method="post" asp-page-handler="Recommend" class="mb-4">
+            <input type="hidden" asp-for="SearchTerm" />
+
+            <div class="mb-2">
+                <label asp-for="SelectedAppId" class="form-label">Select a game</label>
+                <select asp-for="SelectedAppId" class="form-select">
+                    <option value="0">-- choose a game --</option>
+                    @foreach (var g in Model.SearchResults)
+                    {
+                        <option value="@g.AppId">@g.Name (@g.AppId)</option>
+                    }
+                </select>
+            </div>
+
+            <button type="submit" class="btn btn-success">Get Recommendations</button>
+        </form>
+    }
+
+    <!-- Recommendations -->
+    @if (Model.Recommendations.Any())
+    {
+        <h2>Recommendations</h2>
+        <table class="table table-striped table-sm mt-2">
+            <thead>
+                <tr>
+                    <th>AppID</th>
+                    <th>Name</th>
+                    <th>Similarity</th>
+                    <th>Score</th>
+                    <th>Reviews</th>
+                    <th>Review Score (adj)</th>
+                </tr>
+            </thead>
+            <tbody>
+            @foreach (var r in Model.Recommendations)
+            {
+                <tr>
+                    <td>@r.AppId</td>
+                    <td>@r.Name</td>
+                    <td>@r.Similarity.ToString("0.000")</td>
+                    <td>@r.OverallScore.ToString("0.000")</td>
+                    <td>@r.ReviewTotal</td>
+                    <td>@(r.ReviewScoreAdj.ToString("0.000"))</td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    }
+    else if (!string.IsNullOrWhiteSpace(Model.SearchTerm))
+    {
+        <p class="text-muted">No recommendations yet. Try searching and selecting a game.</p>
+    }
+</div>
