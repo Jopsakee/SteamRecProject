@@ -10,7 +10,7 @@ from .config import RAW_DIR
 STORE_APPDETAILS_URL = "https://store.steampowered.com/api/appdetails"
 
 # ---------- SETTINGS YOU CAN TUNE ----------
-MAX_APPS = 200         # None for all apps; start small (e.g. 2000) to test
+MAX_APPS = None        # None for all apps; start small (e.g. 2000) to test
 REQUESTS_PER_MINUTE = 60  # lower if you see rate limit / 429 errors
 COUNTRY = "us"            # region for prices
 LANG = "en"               # language for text

@@ -8,3 +8,7 @@ __pycache__/
 # Negeer build mappen van C#
 bin/
 obj/
+
+data/raw/appdetails_raw.jsonl
+data/raw/*.jsonl
+data/raw/
