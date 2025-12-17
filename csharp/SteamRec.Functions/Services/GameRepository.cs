@@ -7,13 +7,16 @@ public class GameRepository
     private readonly IMongoCollection<GameDocument> _col;
 
     public GameRepository(MongoDb mongo)
-    {
-        _col = mongo.Database.GetCollection<GameDocument>("games");
+{
+    _col = mongo.Database.GetCollection<GameDocument>("games");
 
-        // Ensure appid unique index (good for upserts)
-        var idx = Builders<GameDocument>.IndexKeys.Ascending(x => x.AppId);
-        _col.Indexes.CreateOne(new CreateIndexModel<GameDocument>(idx, new CreateIndexOptions { Unique = true }));
-    }
+    // Unique index on AppId (matches your DB)
+    var idx = Builders<GameDocument>.IndexKeys.Ascending(x => x.AppId);
+    _col.Indexes.CreateOne(new CreateIndexModel<GameDocument>(
+        idx,
+        new CreateIndexOptions { Unique = true }
+    ));
+}
 
     public Task<List<GameDocument>> GetBatchToRefreshAsync(int batchSize)
     {
