@@ -1,4 +1,5 @@
 using Microsoft.Azure.Functions.Worker;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using SteamRec.Functions.Services;
 
@@ -42,7 +43,6 @@ public class RefreshSteamDataFunction
         {
             try
             {
-                // 1) appdetails (price/flags/genres/categories)
                 var details = await _steam.GetAppDetailsAsync(g.AppId, cc, lang);
 
                 if (details.ok)
@@ -55,7 +55,6 @@ public class RefreshSteamDataFunction
                     if (!string.IsNullOrWhiteSpace(details.categories)) g.Categories = details.categories;
                 }
 
-                // 2) reviews summary
                 var reviews = await _steam.GetReviewSummaryAsync(g.AppId);
                 if (reviews.ok)
                 {
@@ -71,7 +70,6 @@ public class RefreshSteamDataFunction
                 await _repo.UpsertAsync(g);
                 ok++;
 
-                // gentle pacing (avoid hammering Steam)
                 await Task.Delay(150);
             }
             catch (Exception ex)
