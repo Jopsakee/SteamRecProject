@@ -11,7 +11,7 @@ from .config import PROCESSED_DIR, RAW_DIR
 APPREVIEWS_URL_TEMPLATE = "https://store.steampowered.com/appreviews/{appid}"
 
 # ---------- SETTINGS YOU CAN TUNE ----------
-REQUESTS_PER_MINUTE = 60     # lower if you hit rate limits
+REQUESTS_PER_MINUTE = 90     # lower if you hit rate limits
 MAX_APPS_REVIEWS = None      # e.g. 10000 to cap, None for all games in games.csv
 SLEEP_BETWEEN_REQUESTS = 60.0 / REQUESTS_PER_MINUTE
 # ------------------------------------------
