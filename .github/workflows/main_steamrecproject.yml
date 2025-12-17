@@ -1,4 +1,4 @@
-name: Build and deploy ASP.Net Core app to Azure Web App - SteamRecProject
+name: Build and deploy SteamRec to Azure Web App (OIDC)
 
 on:
   push:
@@ -7,7 +7,10 @@ on:
   workflow_dispatch:
 
 env:
-  PROJECT_PATH: csharp/SteamRec.Web/SteamRec.Web.csproj
+  WEBAPP_NAME: SteamRecProject
+  DOTNET_VERSION: "8.0.x"
+  # Path to your web project (adjust if your folder name differs)
+  WEB_PROJECT: csharp/SteamRec.Web/SteamRec.Web.csproj
 
 jobs:
   build:
@@ -16,26 +19,27 @@ jobs:
       contents: read
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - name: Set up .NET
+      - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: "8.x"
+          dotnet-version: ${{ env.DOTNET_VERSION }}
 
       - name: Restore
-        run: dotnet restore "${{ env.PROJECT_PATH }}"
+        run: dotnet restore "${{ env.WEB_PROJECT }}"
 
       - name: Build
-        run: dotnet build "${{ env.PROJECT_PATH }}" -c Release --no-restore
+        run: dotnet build "${{ env.WEB_PROJECT }}" -c Release --no-restore
 
       - name: Publish
-        run: dotnet publish "${{ env.PROJECT_PATH }}" -c Release -o "${{ github.workspace }}/publish" --no-build
+        run: dotnet publish "${{ env.WEB_PROJECT }}" -c Release -o "${{ github.workspace }}/publish" --no-build
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: webapp
+          name: steamrec-app
           path: "${{ github.workspace }}/publish"
 
   deploy:
@@ -49,19 +53,19 @@ jobs:
       - name: Download artifact
         uses: actions/download-artifact@v4
         with:
-          name: webapp
-          path: .
+          name: steamrec-app
+          path: "${{ github.workspace }}/publish"
 
-      - name: Login to Azure
+      - name: Login to Azure (OIDC)
         uses: azure/login@v2
         with:
-          client-id: ${{ secrets.__clientidsecretname__ }}
-          tenant-id: ${{ secrets.__tenantidsecretname__ }}
-          subscription-id: ${{ secrets.__subscriptionidsecretname__ }}
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_51A3DD1AC4204DF9A6FE4ED53AC39131 }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_606D63CCF22446B8AE78013DE9D68556 }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_FBECAB55C55740F5A13336857E150AB4 }}
 
       - name: Deploy to Azure Web App
         uses: azure/webapps-deploy@v3
         with:
-          app-name: "SteamRecProject"
-          slot-name: "Production"
-          package: .
+          app-name: ${{ env.WEBAPP_NAME }}
+          slot-name: Production
+          package: "${{ github.workspace }}/publish"
