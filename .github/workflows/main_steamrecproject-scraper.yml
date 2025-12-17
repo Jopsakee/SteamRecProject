@@ -1,0 +1,50 @@
+# Docs: https://github.com/Azure/functions-action
+name: Build and deploy Azure Function App - SteamRecProject-Scraper
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+env:
+  DOTNET_VERSION: "8.0.x"
+  FUNCTIONAPP_NAME: "SteamRecProject-Scraper"
+  FUNCTIONAPP_PROJECT: "csharp/SteamRec.Functions/SteamRec.Functions.csproj"
+  PUBLISH_DIR: "csharp/SteamRec.Functions/publish"
+
+jobs:
+  build-and-deploy:
+    runs-on: windows-latest
+
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      # IMPORTANT: publish the Functions project (not dotnet build at repo root)
+      - name: Publish Function App
+        shell: pwsh
+        run: |
+          dotnet publish ${{ env.FUNCTIONAPP_PROJECT }} -c Release -o ${{ env.PUBLISH_DIR }}
+
+      - name: Login to Azure (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_9CEAF473868D43A1A4908C71FBE44D14 }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_07D3D3ADC721469790A7943DFC7F604E }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_8BC4BE88BDF84AE3B43E3243A65E78C3 }}
+
+      - name: Deploy to Azure Functions
+        uses: Azure/functions-action@v1
+        with:
+          app-name: ${{ env.FUNCTIONAPP_NAME }}
+          package: ${{ env.PUBLISH_DIR }}
