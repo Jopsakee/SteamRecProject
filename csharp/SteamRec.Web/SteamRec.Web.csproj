@@ -2,6 +2,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\SteamRec.Core\SteamRec.Core.csproj" />
+    <ProjectReference Include="..\SteamRec.ML\SteamRec.ML.csproj" />
   </ItemGroup>
 
   <PropertyGroup>

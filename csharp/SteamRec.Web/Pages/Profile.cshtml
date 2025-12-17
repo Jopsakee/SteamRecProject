@@ -14,9 +14,27 @@
             <label asp-for="SteamId" class="form-label">SteamID64</label>
             <input asp-for="SteamId" class="form-control" placeholder="e.g. 7656119XXXXXXXXXX" />
             <span class="form-text text-muted">
-                (You can find this on your Steam profile URL or via third-party sites.)
+                (This must match the steamid values used in your interactions.csv for collaborative.)
             </span>
         </div>
+
+        <div class="mb-3">
+            <label asp-for="Algorithm" class="form-label">Recommendation algorithm</label>
+            <select asp-for="Algorithm" class="form-select">
+                <option value="content">Content-based (tags/genres/reviews)</option>
+                <option value="collab" disabled="@(!Model.CollaborativeAvailable)">
+                    Collaborative (ML.NET Matrix Factorization)
+                </option>
+            </select>
+
+            @if (!Model.CollaborativeAvailable)
+            {
+                <div class="form-text text-warning">
+                    Collaborative model not available yet. Make sure data/processed/interactions.csv exists and has enough users/items.
+                </div>
+            }
+        </div>
+
         <button type="submit" class="btn steam-btn-primary">Load my library</button>
     </form>
 
@@ -25,8 +43,8 @@
         <h2 class="steam-section-title">Matched Library Games</h2>
         <div class="steam-card p-3 mb-4">
             <p class="text-muted">
-                Showing games from your library that we have data for.
-                We use your most-played games to infer your taste.
+                Showing games from your library that we have data for (top 25 by playtime).
+                We infer your taste mostly from your most-played games.
             </p>
             <table class="table table-dark table-striped table-sm mb-0">
                 <thead>
@@ -59,8 +77,8 @@
                     <tr>
                         <th>AppID</th>
                         <th>Name</th>
-                        <th>Similarity</th>
-                        <th>Score</th>
+                        <th>Similarity / CF Score</th>
+                        <th>Overall</th>
                         <th>Reviews</th>
                         <th>Review Score (adj)</th>
                     </tr>
