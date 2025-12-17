@@ -30,7 +30,7 @@ def fetch_owned_games(steamid: str) -> List[Dict[str, Any]]:
 def main():
     STEAM_IDS = [
         "76561198164987397",
-        "76561198236701708", 
+        "76561198236701708",
     ]
 
     all_rows: List[Dict[str, Any]] = []

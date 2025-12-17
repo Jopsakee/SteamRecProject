@@ -22,6 +22,9 @@ public class SteamProfileService
     {
         public int appid { get; set; }
         public int playtime_forever { get; set; }
+
+        // FIX: Steam returns this sometimes (only if played recently). Missing -> 0.
+        public int playtime_2weeks { get; set; }
     }
 
     private class OwnedGamesInnerResponse

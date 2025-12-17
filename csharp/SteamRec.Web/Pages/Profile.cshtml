@@ -2,6 +2,32 @@
 @model SteamRec.Web.Pages.ProfileModel
 @{
     ViewData["Title"] = "Profile-based Recommendations";
+
+    string ReviewLabel(double scoreAdj, int total)
+    {
+        if (total <= 0) return "No user reviews";
+
+        var pct = Math.Clamp(scoreAdj, 0.0, 1.0) * 100.0;
+
+        if (pct >= 95.0) return "Overwhelmingly Positive";
+        if (pct >= 85.0) return "Very Positive";
+        if (pct >= 75.0) return "Mostly Positive";
+        if (pct >= 55.0) return "Mixed";
+        if (pct >= 40.0) return "Mostly Negative";
+        if (pct >= 20.0) return "Very Negative";
+        return "Overwhelmingly Negative";
+    }
+
+    string ReviewBadgeClass(double scoreAdj, int total)
+    {
+        if (total <= 0) return "bg-secondary";
+
+        var pct = Math.Clamp(scoreAdj, 0.0, 1.0) * 100.0;
+
+        if (pct >= 75.0) return "bg-success";
+        if (pct >= 55.0) return "bg-warning text-dark";
+        return "bg-danger";
+    }
 }
 
 <div class="steam-container mt-4">
@@ -13,9 +39,6 @@
         <div class="mb-3">
             <label asp-for="SteamId" class="form-label">SteamID64</label>
             <input asp-for="SteamId" class="form-control" placeholder="e.g. 7656119XXXXXXXXXX" />
-            <span class="form-text text-muted">
-                (This must match the steamid values used in your interactions.csv for collaborative.)
-            </span>
         </div>
 
         <div class="mb-3">
@@ -26,13 +49,13 @@
                     Collaborative (ML.NET Matrix Factorization)
                 </option>
             </select>
+        </div>
 
-            @if (!Model.CollaborativeAvailable)
-            {
-                <div class="form-text text-warning">
-                    Collaborative model not available yet. Make sure data/processed/interactions.csv exists and has enough users/items.
-                </div>
-            }
+        <div class="form-check mb-3">
+            <input asp-for="ContributeToCollaborative" class="form-check-input" type="checkbox" />
+            <label asp-for="ContributeToCollaborative" class="form-check-label">
+                Add my library to interactions.csv (to improve collaborative model)
+            </label>
         </div>
 
         <button type="submit" class="btn steam-btn-primary">Load my library</button>
@@ -42,10 +65,6 @@
     {
         <h2 class="steam-section-title">Matched Library Games</h2>
         <div class="steam-card p-3 mb-4">
-            <p class="text-muted">
-                Showing games from your library that we have data for (top 25 by playtime).
-                We infer your taste mostly from your most-played games.
-            </p>
             <table class="table table-dark table-striped table-sm mb-0">
                 <thead>
                     <tr>
@@ -80,19 +99,29 @@
                         <th>Similarity / CF Score</th>
                         <th>Overall</th>
                         <th>Reviews</th>
-                        <th>Review Score (adj)</th>
+                        <th>Review summary</th>
                     </tr>
                 </thead>
                 <tbody>
                 @foreach (var r in Model.Recommendations)
                 {
+                    var pct = Math.Clamp(r.ReviewScoreAdj, 0.0, 1.0) * 100.0;
+                    var label = ReviewLabel(r.ReviewScoreAdj, r.ReviewTotal);
+                    var badge = ReviewBadgeClass(r.ReviewScoreAdj, r.ReviewTotal);
+
                     <tr>
                         <td>@r.AppId</td>
                         <td>@r.Name</td>
                         <td>@r.Similarity.ToString("0.000")</td>
                         <td>@r.OverallScore.ToString("0.000")</td>
                         <td>@r.ReviewTotal</td>
-                        <td>@r.ReviewScoreAdj.ToString("0.000")</td>
+                        <td>
+                            <span class="badge @badge">@label</span>
+                            @if (r.ReviewTotal > 0)
+                            {
+                                <span class="text-muted ms-2">@pct.ToString("0.0")%</span>
+                            }
+                        </td>
                     </tr>
                 }
                 </tbody>

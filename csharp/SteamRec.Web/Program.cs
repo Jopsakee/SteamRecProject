@@ -6,8 +6,10 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddRazorPages();
 
-// HttpClient for Steam profile service
 builder.Services.AddHttpClient<SteamProfileService>();
+
+// interaction store (writes interactions.csv)
+builder.Services.AddSingleton<InteractionStore>();
 
 // Content-based recommender singleton (games_clean.csv)
 builder.Services.AddSingleton<ContentBasedRecommender>(sp =>
@@ -26,12 +28,11 @@ builder.Services.AddSingleton<ContentBasedRecommender>(sp =>
 });
 
 // Collaborative filtering model singleton (interactions.csv)
+// NOTE: trained at app startup only
 builder.Services.AddSingleton<CollaborativeFilteringRecommender>(sp =>
 {
-    var env = sp.GetRequiredService<IWebHostEnvironment>();
-
-    var interactionsPath = Path.Combine(env.ContentRootPath, "..", "..", "data", "processed", "interactions.csv");
-    interactionsPath = Path.GetFullPath(interactionsPath);
+    var store = sp.GetRequiredService<InteractionStore>();
+    var interactionsPath = store.GetInteractionsPath();
 
     var cf = new CollaborativeFilteringRecommender();
 
@@ -40,14 +41,10 @@ builder.Services.AddSingleton<CollaborativeFilteringRecommender>(sp =>
         Console.WriteLine($"[SteamRec] Loading interactions from: {interactionsPath}");
         cf.TrainFromCsv(interactionsPath);
         Console.WriteLine("[SteamRec] Collaborative model trained OK.");
-
-        var eval = cf.EvaluateHitRateAtK(interactionsPath, k: 20);
-        Console.WriteLine($"[SteamRec] CF HitRate@20={eval.hitRateAtK:0.000} Recall@20={eval.recallAtK:0.000} Users={eval.usersEvaluated}");
     }
     catch (Exception ex)
     {
         Console.WriteLine("[SteamRec] Collaborative model unavailable: " + ex.Message);
-        // Keep instance; IsReady will be false if training failed
     }
 
     return cf;

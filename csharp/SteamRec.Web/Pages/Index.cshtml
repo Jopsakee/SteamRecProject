@@ -2,6 +2,32 @@
 @model SteamRec.Web.Pages.IndexModel
 @{
     ViewData["Title"] = "Steam Game Recommender";
+
+    string ReviewLabel(double scoreAdj, int total)
+    {
+        if (total <= 0) return "No user reviews";
+
+        var pct = Math.Clamp(scoreAdj, 0.0, 1.0) * 100.0;
+
+        if (pct >= 95.0) return "Overwhelmingly Positive";
+        if (pct >= 85.0) return "Very Positive";
+        if (pct >= 75.0) return "Mostly Positive";
+        if (pct >= 55.0) return "Mixed";
+        if (pct >= 40.0) return "Mostly Negative";
+        if (pct >= 20.0) return "Very Negative";
+        return "Overwhelmingly Negative";
+    }
+
+    string ReviewBadgeClass(double scoreAdj, int total)
+    {
+        if (total <= 0) return "bg-secondary";
+
+        var pct = Math.Clamp(scoreAdj, 0.0, 1.0) * 100.0;
+
+        if (pct >= 75.0) return "bg-success";
+        if (pct >= 55.0) return "bg-warning text-dark";
+        return "bg-danger";
+    }
 }
 
 <div class="steam-container mt-4">
@@ -9,19 +35,17 @@
     <p class="steam-subtitle">Search for a game you like and get similar recommendations.</p>
     <p class="text-muted">Loaded games: @Model.TotalGames</p>
 
-    <!-- Search form -->
-    <form method="post" asp-page-handler="Search" class="mb-3 steam-card p-3">
+    <form method="post" asp-page-handler="Search" class="mb-3">
         <div class="input-group">
             <input asp-for="SearchTerm" class="form-control" placeholder="Type a game name (e.g. Risk of Rain)" />
-            <button type="submit" class="btn steam-btn-primary">Search</button>
+            <button type="submit" class="btn btn-primary">Search</button>
         </div>
         <span asp-validation-for="SearchTerm" class="text-danger"></span>
     </form>
 
-    <!-- If we have search results, show dropdown + Recommend button -->
     @if (Model.SearchResults.Any())
     {
-        <form method="post" asp-page-handler="Recommend" class="mb-4 steam-card p-3">
+        <form method="post" asp-page-handler="Recommend" class="mb-4">
             <input type="hidden" asp-for="SearchTerm" />
 
             <div class="mb-2">
@@ -39,12 +63,12 @@
         </form>
     }
 
-    <!-- Recommendations -->
     @if (Model.Recommendations.Any())
     {
         <h2 class="steam-section-title">Recommendations</h2>
+
         <div class="steam-card p-3">
-            <table class="table table-dark table-striped table-sm mt-2 mb-0">
+            <table class="table table-dark table-striped table-sm mb-0">
                 <thead>
                     <tr>
                         <th>AppID</th>
@@ -52,19 +76,29 @@
                         <th>Similarity</th>
                         <th>Score</th>
                         <th>Reviews</th>
-                        <th>Review Score (adj)</th>
+                        <th>Review summary</th>
                     </tr>
                 </thead>
                 <tbody>
                 @foreach (var r in Model.Recommendations)
                 {
+                    var pct = Math.Clamp(r.ReviewScoreAdj, 0.0, 1.0) * 100.0;
+                    var label = ReviewLabel(r.ReviewScoreAdj, r.ReviewTotal);
+                    var badge = ReviewBadgeClass(r.ReviewScoreAdj, r.ReviewTotal);
+
                     <tr>
                         <td>@r.AppId</td>
                         <td>@r.Name</td>
                         <td>@r.Similarity.ToString("0.000")</td>
                         <td>@r.OverallScore.ToString("0.000")</td>
                         <td>@r.ReviewTotal</td>
-                        <td>@(r.ReviewScoreAdj.ToString("0.000"))</td>
+                        <td>
+                            <span class="badge @badge">@label</span>
+                            @if (r.ReviewTotal > 0)
+                            {
+                                <span class="text-muted ms-2">@pct.ToString("0.0")%</span>
+                            }
+                        </td>
                     </tr>
                 }
                 </tbody>

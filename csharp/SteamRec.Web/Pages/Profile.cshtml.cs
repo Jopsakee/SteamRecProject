@@ -15,33 +15,37 @@ public class ProfileModel : PageModel
     private readonly ContentBasedRecommender _recommender;
     private readonly SteamProfileService _profileService;
     private readonly CollaborativeFilteringRecommender _cf;
+    private readonly InteractionStore _interactionStore;
     private readonly IReadOnlyList<GameRecord> _games;
 
-    public ProfileModel(ContentBasedRecommender recommender, SteamProfileService profileService, CollaborativeFilteringRecommender cf)
+    public ProfileModel(
+        ContentBasedRecommender recommender,
+        SteamProfileService profileService,
+        CollaborativeFilteringRecommender cf,
+        InteractionStore interactionStore)
     {
         _recommender = recommender;
         _profileService = profileService;
         _cf = cf;
+        _interactionStore = interactionStore;
         _games = recommender.Games;
     }
 
-    [BindProperty]
-    public string? SteamId { get; set; }
+    [BindProperty] public string? SteamId { get; set; }
 
     // "content" or "collab"
-    [BindProperty]
-    public string Algorithm { get; set; } = "content";
+    [BindProperty] public string Algorithm { get; set; } = "content";
+
+    // Opt-in
+    [BindProperty] public bool ContributeToCollaborative { get; set; } = true;
 
     public bool CollaborativeAvailable => _cf.IsReady;
-
     public int TotalGames => _recommender.GameCount;
 
     public List<OwnedGameViewModel> MatchedOwnedGames { get; private set; } = new();
     public List<RecommendationViewModel> Recommendations { get; private set; } = new();
 
-    public void OnGet()
-    {
-    }
+    public void OnGet() { }
 
     public async Task<IActionResult> OnPostAsync()
     {
@@ -50,11 +54,20 @@ public class ProfileModel : PageModel
 
         var steamId = SteamId.Trim();
 
-        // 1) Fetch owned games from Steam (live)
+        // 1) Fetch owned games from Steam
         var owned = await _profileService.GetOwnedGamesAsync(steamId);
 
-        // 2) Intersect with our dataset
+        // 2) Add to interactions.csv if opted-in (and not already present)
+        // NOTE: No retrain here. Collaborative model is trained at app startup only.
+        if (ContributeToCollaborative)
+        {
+            var rows = owned.Select(o => (o.appid, o.playtime_forever, o.playtime_2weeks));
+            await _interactionStore.TryAddUserAsync(steamId, rows);
+        }
+
+        // 3) Intersect with our dataset for display + content-based liked list
         var ownedById = owned.ToDictionary(o => o.appid, o => o.playtime_forever);
+
         var matched = _games
             .Where(g => ownedById.ContainsKey(g.AppId))
             .Select(g => new OwnedGameViewModel
@@ -68,7 +81,7 @@ public class ProfileModel : PageModel
 
         MatchedOwnedGames = matched;
 
-        // 3) Choose liked appids (>= 60 min); fallback = top 10 by playtime
+        // liked = >= 60 min; fallback = top 10 by playtime
         var likedAppIds = matched
             .Where(m => m.PlaytimeMinutes >= 60)
             .Select(m => m.AppId)
@@ -86,15 +99,14 @@ public class ProfileModel : PageModel
         if (likedAppIds.Count == 0)
             return Page();
 
-        // 4) Recommend based on chosen algorithm
+        // 4) Recommend
         if (Algorithm == "collab" && _cf.IsReady)
         {
-            // CF uses interactions.csv user id = steamid (same string)
-            var ownedSet = MatchedOwnedGames.Select(x => (uint)x.AppId).ToHashSet();
+            var ownedSet = matched.Select(x => (uint)x.AppId).ToHashSet();
             var candidateAppIds = _games.Select(g => (uint)g.AppId);
 
             var scored = _cf.RecommendForUser(
-                userId: steamId,
+                userId: steamId,                 // must match interactions.csv steamid column
                 candidateAppIds: candidateAppIds,
                 excludeAppIds: ownedSet,
                 topN: 20);
@@ -110,8 +122,8 @@ public class ProfileModel : PageModel
                     {
                         AppId = (int)s.appId,
                         Name = game.Name,
-                        Similarity = s.score,     // MF score shown here
-                        OverallScore = s.score,   // same
+                        Similarity = s.score,    // MF score shown here
+                        OverallScore = s.score,
                         ReviewTotal = game.ReviewTotal,
                         ReviewScoreAdj = game.ReviewScoreAdj
                     };
