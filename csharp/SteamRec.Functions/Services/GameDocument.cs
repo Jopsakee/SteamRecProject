@@ -16,8 +16,8 @@ public class GameDocument
     public string? Categories { get; set; }
     public string? Tags { get; set; }
 
-    public float PriceEur { get; set; }
-    public float MetacriticScore { get; set; }
+    public double PriceEur { get; set; }
+    public double MetacriticScore { get; set; }
     public int ReleaseYear { get; set; }
     public int RequiredAge { get; set; }
     public bool IsFree { get; set; }
