@@ -16,18 +16,21 @@ public class ProfileModel : PageModel
     private readonly SteamProfileService _profileService;
     private readonly CollaborativeFilteringRecommender _cf;
     private readonly InteractionStore _interactionStore;
+    private readonly InteractionRepository _interactionRepo;
     private readonly IReadOnlyList<GameRecord> _games;
 
     public ProfileModel(
         ContentBasedRecommender recommender,
         SteamProfileService profileService,
         CollaborativeFilteringRecommender cf,
-        InteractionStore interactionStore)
+        InteractionStore interactionStore,
+        InteractionRepository interactionRepo)
     {
         _recommender = recommender;
         _profileService = profileService;
         _cf = cf;
         _interactionStore = interactionStore;
+        _interactionRepo = interactionRepo;
         _games = recommender.Games;
     }
 
@@ -57,12 +60,33 @@ public class ProfileModel : PageModel
         // 1) Fetch owned games from Steam
         var owned = await _profileService.GetOwnedGamesAsync(steamId);
 
-        // 2) Add to interactions.csv if opted-in (and not already present)
-        // NOTE: No retrain here. Collaborative model is trained at app startup only.
+        // 2) Store interactions if opted-in (Mongo first, CSV fallback)
         if (ContributeToCollaborative)
         {
-            var rows = owned.Select(o => (o.appid, o.playtime_forever, o.playtime_2weeks));
-            await _interactionStore.TryAddUserAsync(steamId, rows);
+            // ignore 0-minute interactions
+            var meaningful = owned
+                .Where(o => o.playtime_forever > 0 || o.playtime_2weeks > 0)
+                .ToList();
+
+            try
+            {
+                var docs = meaningful.Select(o => new InteractionDocument
+                {
+                    SteamId = steamId,
+                    AppId = o.appid,
+                    PlaytimeForever = o.playtime_forever,
+                    Playtime2Weeks = o.playtime_2weeks,
+                    UpdatedUtc = DateTime.UtcNow
+                });
+
+                await _interactionRepo.UpsertManyAsync(steamId, docs);
+            }
+            catch
+            {
+                // CSV fallback
+                var rows = meaningful.Select(o => (o.appid, o.playtime_forever, o.playtime_2weeks));
+                await _interactionStore.TryAddUserAsync(steamId, rows);
+            }
         }
 
         // 3) Intersect with our dataset for display + content-based liked list
@@ -106,7 +130,7 @@ public class ProfileModel : PageModel
             var candidateAppIds = _games.Select(g => (uint)g.AppId);
 
             var scored = _cf.RecommendForUser(
-                userId: steamId,                 // must match interactions.csv steamid column
+                userId: steamId,
                 candidateAppIds: candidateAppIds,
                 excludeAppIds: ownedSet,
                 topN: 20);
@@ -122,7 +146,7 @@ public class ProfileModel : PageModel
                     {
                         AppId = (int)s.appId,
                         Name = game.Name,
-                        Similarity = s.score,    // MF score shown here
+                        Similarity = s.score,
                         OverallScore = s.score,
                         ReviewTotal = game.ReviewTotal,
                         ReviewScoreAdj = game.ReviewScoreAdj
