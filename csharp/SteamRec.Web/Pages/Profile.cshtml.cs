@@ -15,7 +15,6 @@ public class ProfileModel : PageModel
     private readonly ContentBasedRecommender _recommender;
     private readonly SteamProfileService _profileService;
     private readonly CollaborativeFilteringRecommender _cf;
-    private readonly InteractionStore _interactionStore;
     private readonly InteractionRepository _interactionRepo;
     private readonly IReadOnlyList<GameRecord> _games;
 
@@ -23,13 +22,11 @@ public class ProfileModel : PageModel
         ContentBasedRecommender recommender,
         SteamProfileService profileService,
         CollaborativeFilteringRecommender cf,
-        InteractionStore interactionStore,
         InteractionRepository interactionRepo)
     {
         _recommender = recommender;
         _profileService = profileService;
         _cf = cf;
-        _interactionStore = interactionStore;
         _interactionRepo = interactionRepo;
         _games = recommender.Games;
     }
@@ -60,10 +57,9 @@ public class ProfileModel : PageModel
         // 1) Fetch owned games from Steam
         var owned = await _profileService.GetOwnedGamesAsync(steamId);
 
-        // 2) Store interactions if opted-in (Mongo first, CSV fallback)
+        // 2) Store interactions if opted-in (Mongo ONLY)
         if (ContributeToCollaborative)
         {
-            // ignore 0-minute interactions
             var meaningful = owned
                 .Where(o => o.playtime_forever > 0 || o.playtime_2weeks > 0)
                 .ToList();
@@ -81,11 +77,10 @@ public class ProfileModel : PageModel
 
                 await _interactionRepo.UpsertManyAsync(steamId, docs);
             }
-            catch
+            catch (Exception ex)
             {
-                // CSV fallback
-                var rows = meaningful.Select(o => (o.appid, o.playtime_forever, o.playtime_2weeks));
-                await _interactionStore.TryAddUserAsync(steamId, rows);
+                // We don't fallback to CSV anymore, so show a friendly error
+                ModelState.AddModelError(string.Empty, "Could not save interactions to MongoDB: " + ex.Message);
             }
         }
 

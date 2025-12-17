@@ -5,64 +5,23 @@ using SteamRec.Web.Services;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddRazorPages();
-
 builder.Services.AddHttpClient<SteamProfileService>();
 
-// Mongo services
+// Mongo services (Mongo is now the ONLY source of truth)
 builder.Services.AddSingleton<MongoDb>();
 builder.Services.AddSingleton<GameRepository>();
 builder.Services.AddSingleton<InteractionRepository>();
 
-// Fallback CSV interaction store still registered (optional)
-builder.Services.AddSingleton<InteractionStore>();
-
-// Content-based recommender (Mongo-first, CSV fallback)
+// Content-based recommender (Mongo ONLY)
 builder.Services.AddSingleton<ContentBasedRecommender>(sp =>
 {
-    var env = sp.GetRequiredService<IWebHostEnvironment>();
-    var csvPath = Path.GetFullPath(Path.Combine(env.ContentRootPath, "..", "..", "data", "processed", "games_clean.csv"));
+    var repo = sp.GetRequiredService<GameRepository>();
+    var docs = repo.GetAllAsync().GetAwaiter().GetResult();
 
-    try
-    {
-        var repo = sp.GetRequiredService<GameRepository>();
-        var docs = repo.GetAllAsync().GetAwaiter().GetResult();
+    if (docs.Count == 0)
+        throw new InvalidOperationException("[SteamRec] MongoDB returned 0 games. Did you import games into the 'games' collection?");
 
-        Console.WriteLine($"[SteamRec] Loaded {docs.Count} games from MongoDB.");
-
-        var games = docs.Select(d =>
-        {
-            var g = new GameRecord
-            {
-                AppId = d.AppId,
-                Name = d.Name ?? "",
-                GenresRaw = d.Genres ?? "",
-                CategoriesRaw = d.Categories ?? "",
-                TagsRaw = d.Tags ?? "",
-                PriceEur = d.PriceEur,
-                MetacriticScore = d.MetacriticScore,
-                ReleaseYear = d.ReleaseYear,
-                RequiredAge = d.RequiredAge,
-                IsFree = d.IsFree,
-                ReviewTotal = d.ReviewTotal,
-                ReviewRatio = d.ReviewRatio,
-                ReviewScoreAdj = d.ReviewScoreAdj,
-            };
-
-            g.Genres = SplitSemicolon(g.GenresRaw);
-            g.Categories = SplitSemicolon(g.CategoriesRaw);
-            g.Tags = SplitSemicolon(g.TagsRaw);
-
-            return g;
-        }).ToList();
-
-        return new ContentBasedRecommender(games);
-    }
-    catch (Exception ex)
-    {
-        Console.WriteLine("[SteamRec] Mongo load failed; falling back to CSV. Reason: " + ex.Message);
-        var games = GameDataLoader.LoadGames(csvPath);
-        return new ContentBasedRecommender(games);
-    }
+    Console.WriteLine($"[SteamRec] Loaded {docs.Count} games from MongoDB.");
 
     static HashSet<string> SplitSemicolon(string s)
     {
@@ -74,9 +33,37 @@ builder.Services.AddSingleton<ContentBasedRecommender>(sp =>
             .Where(x => x.Length > 0)
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
     }
+
+    var games = docs.Select(d =>
+    {
+        var g = new GameRecord
+        {
+            AppId = d.AppId,
+            Name = d.Name ?? "",
+            GenresRaw = d.Genres ?? "",
+            CategoriesRaw = d.Categories ?? "",
+            TagsRaw = d.Tags ?? "",
+            PriceEur = d.PriceEur,
+            MetacriticScore = d.MetacriticScore,
+            ReleaseYear = d.ReleaseYear,
+            RequiredAge = d.RequiredAge,
+            IsFree = d.IsFree,
+            ReviewTotal = d.ReviewTotal,
+            ReviewRatio = d.ReviewRatio,
+            ReviewScoreAdj = d.ReviewScoreAdj,
+        };
+
+        g.Genres = SplitSemicolon(g.GenresRaw);
+        g.Categories = SplitSemicolon(g.CategoriesRaw);
+        g.Tags = SplitSemicolon(g.TagsRaw);
+
+        return g;
+    }).ToList();
+
+    return new ContentBasedRecommender(games);
 });
 
-// Collaborative filtering (Mongo-first, CSV fallback)
+// Collaborative filtering (Mongo ONLY; if not enough data => stays disabled)
 builder.Services.AddSingleton<CollaborativeFilteringRecommender>(sp =>
 {
     var cf = new CollaborativeFilteringRecommender();
@@ -97,32 +84,20 @@ builder.Services.AddSingleton<CollaborativeFilteringRecommender>(sp =>
 
         cf.TrainFromRows(rows);
         Console.WriteLine("[SteamRec] Collaborative model trained from MongoDB.");
-        return cf;
     }
-    catch (Exception exMongo)
+    catch (Exception ex)
     {
-        Console.WriteLine("[SteamRec] Mongo interactions unavailable: " + exMongo.Message);
-
-        try
-        {
-            var store = sp.GetRequiredService<InteractionStore>();
-            var interactionsPath = store.GetInteractionsPath();
-
-            Console.WriteLine($"[SteamRec] Falling back to interactions.csv: {interactionsPath}");
-            cf.TrainFromCsv(interactionsPath);
-            Console.WriteLine("[SteamRec] Collaborative model trained from CSV.");
-        }
-        catch (Exception exCsv)
-        {
-            Console.WriteLine("[SteamRec] Collaborative model unavailable: " + exCsv.Message);
-        }
-
-        return cf;
+        // Don't crash the app if CF can't train yet
+        Console.WriteLine("[SteamRec] Collaborative model not ready: " + ex.Message);
+        // cf.IsReady will remain false
     }
+
+    return cf;
 });
 
 var app = builder.Build();
 
+// Force singletons to initialize at startup so you see logs immediately
 using (var scope = app.Services.CreateScope())
 {
     scope.ServiceProvider.GetRequiredService<ContentBasedRecommender>();
