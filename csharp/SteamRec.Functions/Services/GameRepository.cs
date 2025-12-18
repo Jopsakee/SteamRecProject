@@ -10,32 +10,38 @@ public class GameRepository
     {
         _col = mongo.Database.GetCollection<GameDocument>("games");
 
-        // Unique index on AppId, but only for valid AppId > 0 (avoids null/0 legacy docs killing index builds)
+        // Unique index on AppId (compatible with older MongoDB.Driver)
+        // NOTE: This will fail if you have any documents where AppId is missing/0.
         var idx = Builders<GameDocument>.IndexKeys.Ascending(x => x.AppId);
-        var opts = new CreateIndexOptions
+
+        try
         {
-            Unique = true,
-            PartialFilterExpression = Builders<GameDocument>.Filter.Gt(x => x.AppId, 0)
-        };
-        _col.Indexes.CreateOne(new CreateIndexModel<GameDocument>(idx, opts));
+            _col.Indexes.CreateOne(new CreateIndexModel<GameDocument>(
+                idx,
+                new CreateIndexOptions
+                {
+                    Unique = true,
+                    Name = "AppId_1"
+                }));
+        }
+        catch
+        {
+            // If it already exists or fails due to existing bad docs, the function will still run.
+            // You can check/fix the collection then redeploy.
+        }
     }
 
     public Task<List<GameDocument>> GetStaleBatchAsync(int batchSize, DateTime staleBeforeUtc)
     {
-        // refresh oldest first, only those that are stale enough
-        var filter = Builders<GameDocument>.Filter.Lt(x => x.UpdatedUtc, staleBeforeUtc)
-                    & Builders<GameDocument>.Filter.Gt(x => x.AppId, 0);
+        // Only refresh docs that have a valid AppId and are stale
+        var filter =
+            Builders<GameDocument>.Filter.Gt(x => x.AppId, 0) &
+            Builders<GameDocument>.Filter.Lt(x => x.UpdatedUtc, staleBeforeUtc);
 
         return _col.Find(filter)
             .SortBy(x => x.UpdatedUtc)
             .Limit(batchSize)
             .ToListAsync();
-    }
-
-    public Task<bool> ExistsAsync(int appId)
-    {
-        var filter = Builders<GameDocument>.Filter.Eq(x => x.AppId, appId);
-        return _col.Find(filter).Limit(1).AnyAsync();
     }
 
     public Task UpsertAsync(GameDocument doc)
@@ -44,5 +50,11 @@ public class GameRepository
 
         var filter = Builders<GameDocument>.Filter.Eq(x => x.AppId, doc.AppId);
         return _col.ReplaceOneAsync(filter, doc, new ReplaceOptions { IsUpsert = true });
+    }
+
+    public Task<bool> ExistsAsync(int appId)
+    {
+        var filter = Builders<GameDocument>.Filter.Eq(x => x.AppId, appId);
+        return _col.Find(filter).Limit(1).AnyAsync();
     }
 }
