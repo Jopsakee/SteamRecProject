@@ -10,8 +10,6 @@ public class GameRepository
     {
         _col = mongo.Database.GetCollection<GameDocument>("games");
 
-        // Unique index on AppId (compatible with older MongoDB.Driver)
-        // NOTE: This will fail if you have any documents where AppId is missing/0.
         var idx = Builders<GameDocument>.IndexKeys.Ascending(x => x.AppId);
 
         try
@@ -26,14 +24,12 @@ public class GameRepository
         }
         catch
         {
-            // If it already exists or fails due to existing bad docs, the function will still run.
-            // You can check/fix the collection then redeploy.
+            // Ignore if exists already.
         }
     }
 
     public Task<List<GameDocument>> GetStaleBatchAsync(int batchSize, DateTime staleBeforeUtc)
     {
-        // Only refresh docs that have a valid AppId and are stale
         var filter =
             Builders<GameDocument>.Filter.Gt(x => x.AppId, 0) &
             Builders<GameDocument>.Filter.Lt(x => x.UpdatedUtc, staleBeforeUtc);
@@ -44,12 +40,37 @@ public class GameRepository
             .ToListAsync();
     }
 
+    // IMPORTANT: Use UpdateOne(upsert) so we never touch immutable _id.
     public Task UpsertAsync(GameDocument doc)
     {
         if (doc.AppId <= 0) return Task.CompletedTask;
 
         var filter = Builders<GameDocument>.Filter.Eq(x => x.AppId, doc.AppId);
-        return _col.ReplaceOneAsync(filter, doc, new ReplaceOptions { IsUpsert = true });
+
+        var update = Builders<GameDocument>.Update
+            .SetOnInsert(x => x.AppId, doc.AppId)
+            .Set(x => x.Name, doc.Name)
+
+            .Set(x => x.Genres, doc.Genres)
+            .Set(x => x.Categories, doc.Categories)
+            .Set(x => x.Tags, doc.Tags)
+
+            .Set(x => x.PriceEur, doc.PriceEur)
+            .Set(x => x.MetacriticScore, doc.MetacriticScore)
+            .Set(x => x.ReleaseYear, doc.ReleaseYear)
+            .Set(x => x.RequiredAge, doc.RequiredAge)
+            .Set(x => x.IsFree, doc.IsFree)
+
+            .Set(x => x.ReviewPositive, doc.ReviewPositive)
+            .Set(x => x.ReviewNegative, doc.ReviewNegative)
+            .Set(x => x.ReviewTotal, doc.ReviewTotal)
+            .Set(x => x.ReviewRatio, doc.ReviewRatio)
+            .Set(x => x.ReviewScoreAdj, doc.ReviewScoreAdj)
+            .Set(x => x.ReviewVolumeLog, doc.ReviewVolumeLog)
+
+            .Set(x => x.UpdatedUtc, doc.UpdatedUtc);
+
+        return _col.UpdateOneAsync(filter, update, new UpdateOptions { IsUpsert = true });
     }
 
     public Task<bool> ExistsAsync(int appId)
