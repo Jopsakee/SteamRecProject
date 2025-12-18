@@ -1,5 +1,5 @@
-using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using SteamRec.Functions.Services;
 
 var host = new HostBuilder()
@@ -15,7 +15,6 @@ var host = new HostBuilder()
 
         services.AddSingleton<SteamStoreClient>();
         services.AddSingleton<SteamAppListClient>();
-        services.AddSingleton<SteamWebApiClient>();
     })
     .Build();
 
