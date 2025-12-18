@@ -9,12 +9,13 @@ var host = new HostBuilder()
         services.AddHttpClient();
 
         services.AddSingleton<MongoDb>();
+
         services.AddSingleton<GameRepository>();
         services.AddSingleton<SteamAppRepository>();
 
         services.AddSingleton<SteamStoreClient>();
         services.AddSingleton<SteamAppListClient>();
-        builder.Services.AddSingleton<SteamWebApiClient>();
+        services.AddSingleton<SteamWebApiClient>();
     })
     .Build();
 

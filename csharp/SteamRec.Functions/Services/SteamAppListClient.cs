@@ -1,4 +1,5 @@
-using System.Text.Json;
+using System.Net.Http.Json;
+using System.Text.Json.Serialization;
 
 namespace SteamRec.Functions.Services;
 
@@ -12,29 +13,33 @@ public class SteamAppListClient
         _http.Timeout = TimeSpan.FromSeconds(60);
     }
 
-    public async Task<List<(int appId, string name)>> GetAllAppsAsync()
+    public async Task<List<(int appId, string name)>> GetAppListAsync()
     {
-        // Official Steam endpoint for the full app list
+        // No API key needed
         var url = "https://api.steampowered.com/ISteamApps/GetAppList/v2/";
 
-        using var resp = await _http.GetAsync(url);
-        resp.EnsureSuccessStatusCode();
+        var dto = await _http.GetFromJsonAsync<AppListResponse>(url);
+        var apps = dto?.applist?.apps ?? new List<AppDto>();
 
-        using var doc = JsonDocument.Parse(await resp.Content.ReadAsStringAsync());
-
-        var apps = doc.RootElement
-            .GetProperty("applist")
-            .GetProperty("apps")
-            .EnumerateArray()
-            .Select(a =>
-            {
-                var appId = a.TryGetProperty("appid", out var idEl) ? idEl.GetInt32() : 0;
-                var name = a.TryGetProperty("name", out var nEl) ? (nEl.GetString() ?? "") : "";
-                return (appId, name);
-            })
-            .Where(x => x.appId > 0)
+        return apps
+            .Where(a => a.appid > 0)
+            .Select(a => (a.appid, a.name ?? ""))
             .ToList();
+    }
 
-        return apps;
+    private class AppListResponse
+    {
+        public AppList? applist { get; set; }
+    }
+
+    private class AppList
+    {
+        public List<AppDto> apps { get; set; } = new();
+    }
+
+    private class AppDto
+    {
+        public int appid { get; set; }
+        public string? name { get; set; }
     }
 }
