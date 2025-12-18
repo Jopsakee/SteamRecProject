@@ -14,6 +14,7 @@ var host = new HostBuilder()
 
         services.AddSingleton<SteamStoreClient>();
         services.AddSingleton<SteamAppListClient>();
+        builder.Services.AddSingleton<SteamWebApiClient>();
     })
     .Build();
 

@@ -1,6 +1,6 @@
+using System.Net;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using SteamRec.Functions.Services;
 
@@ -11,46 +11,35 @@ public class SyncSteamAppListFunction
     private readonly ILogger _log;
     private readonly SteamAppListClient _client;
     private readonly SteamAppRepository _repo;
-    private readonly IConfiguration _config;
 
     public SyncSteamAppListFunction(
         ILoggerFactory loggerFactory,
         SteamAppListClient client,
-        SteamAppRepository repo,
-        IConfiguration config)
+        SteamAppRepository repo)
     {
         _log = loggerFactory.CreateLogger<SyncSteamAppListFunction>();
         _client = client;
         _repo = repo;
-        _config = config;
     }
 
-    // Run daily (or whatever you set). This keeps steam_apps updated with new appids.
+    // Manual run (Portal Test/Run or HTTP call)
     [Function("SyncSteamAppList")]
-    public async Task RunTimer([TimerTrigger("%SteamRecAppListSchedule%")] object timerInfo)
-        => await RunInternalAsync("timer");
-
-    // Manual run from the portal: open this function and click Test/Run (HTTP trigger).
-    [Function("SyncSteamAppList_Manual")]
-    public async Task<HttpResponseData> RunHttp(
-        [HttpTrigger(AuthorizationLevel.Function, "post", Route = "sync-app-list")] HttpRequestData req)
+    public async Task<HttpResponseData> Run(
+        [HttpTrigger(AuthorizationLevel.Function, "post", "get")] HttpRequestData req)
     {
-        await RunInternalAsync("http");
-        var res = req.CreateResponse(System.Net.HttpStatusCode.OK);
-        await res.WriteStringAsync("OK - steam_apps synced");
+        var started = DateTime.UtcNow;
+        _log.LogInformation("[SyncSteamAppList] Starting. utcNow={utcNow}", started);
+
+        var apps = await _client.GetAppListAsync();
+        _log.LogInformation("[SyncSteamAppList] Fetched app list count={count}", apps.Count);
+
+        await _repo.UpsertFromAppListAsync(apps.Select(a => (a.appId, a.name)));
+
+        var elapsed = (DateTime.UtcNow - started).TotalSeconds;
+        _log.LogInformation("[SyncSteamAppList] Done. elapsedSec={sec}", elapsed);
+
+        var res = req.CreateResponse(HttpStatusCode.OK);
+        await res.WriteStringAsync($"OK. Synced {apps.Count} apps. elapsedSec={elapsed:0.0}");
         return res;
-    }
-
-    private async Task RunInternalAsync(string reason)
-    {
-        _log.LogInformation("[SyncSteamAppList] Start ({reason}) utcNow={utcNow}", reason, DateTime.UtcNow);
-
-        var apps = await _client.GetAllAppsAsync();
-        _log.LogInformation("[SyncSteamAppList] Downloaded {count} apps from Steam.", apps.Count);
-
-        // Upsert to steam_apps
-        await _repo.UpsertFromAppListAsync(apps);
-
-        _log.LogInformation("[SyncSteamAppList] Done utcNow={utcNow}", DateTime.UtcNow);
     }
 }
