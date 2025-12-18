@@ -7,11 +7,17 @@ var host = new HostBuilder()
     .ConfigureFunctionsWorkerDefaults()
     .ConfigureServices(services =>
     {
-        // Named HttpClient so we reliably get an IHttpClientBuilder
+        // Named clients so we can enable automatic decompression (fixes gzipped body snippets)
         services.AddHttpClient("steam")
             .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
             {
-                AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate
+                AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate | DecompressionMethods.Brotli
+            });
+
+        services.AddHttpClient("steamspy")
+            .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+            {
+                AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate | DecompressionMethods.Brotli
             });
 
         services.AddSingleton<MongoDb>();
@@ -21,6 +27,7 @@ var host = new HostBuilder()
 
         services.AddSingleton<SteamStoreClient>();
         services.AddSingleton<SteamAppListClient>();
+        services.AddSingleton<SteamSpyClient>();
     })
     .Build();
 

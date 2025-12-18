@@ -11,6 +11,7 @@ public class RefreshSteamDataFunction
     private readonly GameRepository _games;
     private readonly SteamAppRepository _apps;
     private readonly SteamStoreClient _steam;
+    private readonly SteamSpyClient _spy;
     private readonly IConfiguration _config;
 
     public RefreshSteamDataFunction(
@@ -18,12 +19,14 @@ public class RefreshSteamDataFunction
         GameRepository games,
         SteamAppRepository apps,
         SteamStoreClient steam,
+        SteamSpyClient spy,
         IConfiguration config)
     {
         _log = loggerFactory.CreateLogger<RefreshSteamDataFunction>();
         _games = games;
         _apps = apps;
         _steam = steam;
+        _spy = spy;
         _config = config;
     }
 
@@ -34,13 +37,16 @@ public class RefreshSteamDataFunction
         var cc = _config["SteamRec:CountryCode"] ?? "be";
         var lang = _config["SteamRec:Language"] ?? "en";
 
-        var delayMs = int.TryParse(_config["SteamRec:RequestDelayMs"], out var d) ? d : 200;
+        var delayMs = int.TryParse(_config["SteamRec:RequestDelayMs"], out var d) ? d : 500;
 
-        // How stale before we refresh existing docs (hours)
         var staleHours = int.TryParse(_config["SteamRec:StaleHours"], out var sh) ? sh : 24;
-
-        // Optional time budget so you never risk “too long” runs
         var timeBudgetSeconds = int.TryParse(_config["SteamRec:TimeBudgetSeconds"], out var tb) ? tb : 240;
+
+        var enableSteamSpyTags =
+            bool.TryParse(_config["SteamRec:EnableSteamSpyTags"], out var en) ? en : true;
+
+        var steamSpyMaxTags =
+            int.TryParse(_config["SteamRec:SteamSpyMaxTags"], out var mt) ? mt : 15;
 
         var started = DateTime.UtcNow;
         var staleBefore = DateTime.UtcNow.AddHours(-staleHours);
@@ -49,10 +55,8 @@ public class RefreshSteamDataFunction
             "[RefreshSteamData] Start batchSize={batchSize}, staleHours={staleHours}, delayMs={delayMs}, cc={cc}, lang={lang}, budgetSec={budgetSec}, utcNow={utcNow}",
             batchSize, staleHours, delayMs, cc, lang, timeBudgetSeconds, started);
 
-        // 1) Prefer missing games (bootstrap mode)
         var toHydrate = await _apps.GetNextToHydrateAsync(batchSize);
 
-        // 2) If not enough missing, fill remainder with stale games (maintenance mode)
         var remaining = batchSize - toHydrate.Count;
         var stale = remaining > 0
             ? await _games.GetStaleBatchAsync(remaining, staleBefore)
@@ -61,14 +65,14 @@ public class RefreshSteamDataFunction
         _log.LogInformation("[RefreshSteamData] Picked missing={missing} + stale={stale} = total={total}",
             toHydrate.Count, stale.Count, toHydrate.Count + stale.Count);
 
-        int ok = 0, fail = 0, skipped = 0;
+        int ok = 0, fail = 0, skippedNonGame = 0;
 
-        // --- Process missing first ---
         foreach (var app in toHydrate)
         {
             if ((DateTime.UtcNow - started).TotalSeconds > timeBudgetSeconds)
             {
-                _log.LogWarning("[RefreshSteamData] Time budget reached; stopping early. ok={ok}, fail={fail}, skipped={skipped}", ok, fail, skipped);
+                _log.LogWarning("[RefreshSteamData] Time budget reached; stopping early. ok={ok}, fail={fail}, skippedNonGame={skipped}",
+                    ok, fail, skippedNonGame);
                 break;
             }
 
@@ -77,7 +81,6 @@ public class RefreshSteamDataFunction
 
             try
             {
-                // Build doc first, but only upsert if it's truly a "game"
                 var gameDoc = new GameDocument
                 {
                     AppId = appId,
@@ -85,23 +88,20 @@ public class RefreshSteamDataFunction
                     UpdatedUtc = DateTime.UtcNow
                 };
 
-                var shouldUpsert = await RefreshOneAsync(gameDoc, cc, lang);
+                var isGame = await RefreshOneAsync(gameDoc, cc, lang, enableSteamSpyTags, steamSpyMaxTags);
 
-                if (!shouldUpsert)
+                // Mark hydrated regardless (so DLC/mod/etc. doesn't loop forever)
+                await _apps.MarkHydratedAsync(appId);
+
+                if (!isGame)
                 {
-                    skipped++;
-                    _log.LogInformation("[RefreshSteamData] Skipped non-game appid={appid} name={name}", appId, gameDoc.Name);
-
-                    // Important: mark hydrated so we don't keep retrying forever
-                    await _apps.MarkHydratedAsync(appId);
+                    skippedNonGame++;
+                    ok++;
                     await Task.Delay(delayMs);
                     continue;
                 }
 
-                _log.LogInformation("[RefreshSteamData] Upserting appid={appid} name={name}", gameDoc.AppId, gameDoc.Name);
-
                 await _games.UpsertAsync(gameDoc);
-                await _apps.MarkHydratedAsync(appId);
 
                 ok++;
                 await Task.Delay(delayMs);
@@ -118,12 +118,12 @@ public class RefreshSteamDataFunction
             }
         }
 
-        // --- Then process stale games ---
         foreach (var g in stale)
         {
             if ((DateTime.UtcNow - started).TotalSeconds > timeBudgetSeconds)
             {
-                _log.LogWarning("[RefreshSteamData] Time budget reached; stopping early. ok={ok}, fail={fail}, skipped={skipped}", ok, fail, skipped);
+                _log.LogWarning("[RefreshSteamData] Time budget reached; stopping early. ok={ok}, fail={fail}, skippedNonGame={skipped}",
+                    ok, fail, skippedNonGame);
                 break;
             }
 
@@ -131,16 +131,11 @@ public class RefreshSteamDataFunction
 
             try
             {
-                var shouldUpsert = await RefreshOneAsync(g, cc, lang);
-                if (!shouldUpsert)
-                {
-                    skipped++;
-                    _log.LogInformation("[RefreshSteamData] Skipped non-game (stale list) appid={appid} name={name}", g.AppId, g.Name);
-                    await Task.Delay(delayMs);
-                    continue;
-                }
-
-                await _games.UpsertAsync(g);
+                var isGame = await RefreshOneAsync(g, cc, lang, enableSteamSpyTags, steamSpyMaxTags);
+                if (isGame)
+                    await _games.UpsertAsync(g);
+                else
+                    skippedNonGame++;
 
                 ok++;
                 await Task.Delay(delayMs);
@@ -153,38 +148,34 @@ public class RefreshSteamDataFunction
             }
         }
 
-        _log.LogInformation("[RefreshSteamData] Done ok={ok}, fail={fail}, skipped={skipped}, elapsedSec={sec}",
-            ok, fail, skipped, (DateTime.UtcNow - started).TotalSeconds);
+        _log.LogInformation("[RefreshSteamData] Done ok={ok}, fail={fail}, skippedNonGame={skipped}, elapsedSec={sec}",
+            ok, fail, skippedNonGame, (DateTime.UtcNow - started).TotalSeconds);
     }
 
-    /// <summary>
-    /// Returns true if this app should be upserted into games (i.e., it is a real "game").
-    /// </summary>
-    private async Task<bool> RefreshOneAsync(GameDocument g, string cc, string lang)
+    private async Task<bool> RefreshOneAsync(GameDocument g, string cc, string lang, bool enableSteamSpyTags, int steamSpyMaxTags)
     {
-        // Store details (price, tags etc.)
         var details = await _steam.GetAppDetailsAsync(g.AppId, cc, lang);
 
-        if (!details.ok)
+        if (details.ok)
         {
-            // If appdetails fails, we still let reviews try; but we can't decide type reliably.
-            // We'll treat as "not upsertable" so we don't insert junk docs.
-            return false;
+            // Skip anything that isn't a real "game"
+            if (!string.IsNullOrWhiteSpace(details.appType) &&
+                !details.appType.Equals("game", StringComparison.OrdinalIgnoreCase))
+            {
+                _log.LogInformation("[RefreshSteamData] Skipping non-game appid={appid} type={type} name={name}",
+                    g.AppId, details.appType, g.Name);
+                return false;
+            }
+
+            if (details.priceEur.HasValue) g.PriceEur = details.priceEur.Value;
+            if (details.isFree.HasValue) g.IsFree = details.isFree.Value;
+            if (details.requiredAge.HasValue) g.RequiredAge = details.requiredAge.Value;
+            if (details.metacritic.HasValue) g.MetacriticScore = details.metacritic.Value;
+            if (details.releaseYear.HasValue) g.ReleaseYear = details.releaseYear.Value;
+            if (!string.IsNullOrWhiteSpace(details.genres)) g.Genres = details.genres;
+            if (!string.IsNullOrWhiteSpace(details.categories)) g.Categories = details.categories;
         }
 
-        // Filter to only "game"
-        if (!string.Equals(details.type, "game", StringComparison.OrdinalIgnoreCase))
-            return false;
-
-        if (details.priceEur.HasValue) g.PriceEur = details.priceEur.Value;
-        if (details.isFree.HasValue) g.IsFree = details.isFree.Value;
-        if (details.requiredAge.HasValue) g.RequiredAge = details.requiredAge.Value;
-        if (details.metacritic.HasValue) g.MetacriticScore = details.metacritic.Value;
-        if (details.releaseYear.HasValue) g.ReleaseYear = details.releaseYear.Value;
-        if (!string.IsNullOrWhiteSpace(details.genres)) g.Genres = details.genres;
-        if (!string.IsNullOrWhiteSpace(details.categories)) g.Categories = details.categories;
-
-        // Store reviews summary
         var reviews = await _steam.GetReviewSummaryAsync(g.AppId);
         if (reviews.ok)
         {
@@ -193,8 +184,15 @@ public class RefreshSteamDataFunction
             g.ReviewTotal = reviews.total;
             g.ReviewRatio = reviews.ratio;
             g.ReviewScoreAdj = reviews.scoreAdj;
-
             g.ReviewVolumeLog = Math.Log10(Math.Max(1, g.ReviewTotal));
+        }
+
+        // SteamSpy tags (only if missing)
+        if (enableSteamSpyTags && string.IsNullOrWhiteSpace(g.Tags))
+        {
+            var (okTags, tags) = await _spy.GetTopTagsAsync(g.AppId, steamSpyMaxTags);
+            if (okTags && !string.IsNullOrWhiteSpace(tags))
+                g.Tags = tags;
         }
 
         g.UpdatedUtc = DateTime.UtcNow;

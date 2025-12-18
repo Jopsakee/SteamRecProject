@@ -13,24 +13,15 @@ public class SteamStoreClient
     public SteamStoreClient(IHttpClientFactory factory, ILogger<SteamStoreClient> log)
     {
         _log = log;
-        _http = factory.CreateClient();
+        _http = factory.CreateClient("steam");
         _http.Timeout = TimeSpan.FromSeconds(30);
 
         if (!_http.DefaultRequestHeaders.UserAgent.Any())
             _http.DefaultRequestHeaders.UserAgent.ParseAdd("SteamRecProject/1.0 (+AzureFunctions)");
     }
 
-    public async Task<(
-        bool ok,
-        double? priceEur,
-        bool? isFree,
-        int? requiredAge,
-        double? metacritic,
-        string? genres,
-        string? categories,
-        string? type,
-        int? releaseYear
-    )> GetAppDetailsAsync(int appId, string cc = "be", string lang = "en", CancellationToken ct = default)
+    public async Task<(bool ok, string? appType, int? releaseYear, double? priceEur, bool? isFree, int? requiredAge, double? metacritic, string? genres, string? categories)>
+        GetAppDetailsAsync(int appId, string cc = "be", string lang = "en", CancellationToken ct = default)
     {
         var url = $"https://store.steampowered.com/api/appdetails?appids={appId}&cc={cc}&l={lang}";
 
@@ -59,18 +50,35 @@ public class SteamStoreClient
             if (!root.TryGetProperty("success", out var successEl) || successEl.ValueKind != JsonValueKind.True) return (false, null, null, null, null, null, null, null, null);
             if (!root.TryGetProperty("data", out var data) || data.ValueKind != JsonValueKind.Object) return (false, null, null, null, null, null, null, null, null);
 
-            // --- type (game/dlc/mod/tool/etc.) ---
-            string? type = null;
+            // type (game/dlc/demo/mod/etc.)
+            string? appType = null;
             if (data.TryGetProperty("type", out var typeEl) && typeEl.ValueKind == JsonValueKind.String)
-                type = typeEl.GetString();
+                appType = typeEl.GetString();
 
-            // --- is_free ---
+            // release year
+            int? releaseYear = null;
+            if (data.TryGetProperty("release_date", out var rd) && rd.ValueKind == JsonValueKind.Object &&
+                rd.TryGetProperty("date", out var dateEl) && dateEl.ValueKind == JsonValueKind.String)
+            {
+                var dateStr = dateEl.GetString();
+                if (!string.IsNullOrWhiteSpace(dateStr))
+                {
+                    if (DateTime.TryParse(dateStr, CultureInfo.InvariantCulture, DateTimeStyles.AllowWhiteSpaces, out var dt))
+                        releaseYear = dt.Year;
+                    else
+                    {
+                        // fallback: grab a 4-digit year anywhere in the string
+                        var y = ExtractYear(dateStr);
+                        if (y.HasValue) releaseYear = y.Value;
+                    }
+                }
+            }
+
             bool? isFree = null;
             if (data.TryGetProperty("is_free", out var isFreeEl) &&
                 (isFreeEl.ValueKind == JsonValueKind.True || isFreeEl.ValueKind == JsonValueKind.False))
                 isFree = isFreeEl.GetBoolean();
 
-            // --- required_age (can be number or string) ---
             int? requiredAge = null;
             if (data.TryGetProperty("required_age", out var ageEl) && ageEl.ValueKind != JsonValueKind.Null)
             {
@@ -80,7 +88,6 @@ public class SteamStoreClient
                     requiredAge = ageStr;
             }
 
-            // --- metacritic.score (can be number or string) ---
             double? metacritic = null;
             if (data.TryGetProperty("metacritic", out var metaObj) && metaObj.ValueKind == JsonValueKind.Object)
             {
@@ -91,30 +98,6 @@ public class SteamStoreClient
                 }
             }
 
-            // --- release year from release_date.date ---
-            int? releaseYear = null;
-            if (data.TryGetProperty("release_date", out var relObj) && relObj.ValueKind == JsonValueKind.Object)
-            {
-                if (relObj.TryGetProperty("date", out var dateEl) && dateEl.ValueKind == JsonValueKind.String)
-                {
-                    var dateStr = dateEl.GetString();
-                    if (!string.IsNullOrWhiteSpace(dateStr))
-                    {
-                        // Prefer en-US formats; Steam often returns "16 Oct, 2014" when lang=en
-                        if (DateTime.TryParse(dateStr, CultureInfo.GetCultureInfo("en-US"),
-                                DateTimeStyles.AllowWhiteSpaces, out var dt)
-                            || DateTime.TryParse(dateStr, CultureInfo.InvariantCulture,
-                                DateTimeStyles.AllowWhiteSpaces, out dt))
-                        {
-                            // ignore nonsense years
-                            if (dt.Year >= 1970 && dt.Year <= DateTime.UtcNow.Year + 1)
-                                releaseYear = dt.Year;
-                        }
-                    }
-                }
-            }
-
-            // --- price_overview.final (in cents) ---
             double? priceEur = null;
             if (data.TryGetProperty("price_overview", out var priceObj) && priceObj.ValueKind == JsonValueKind.Object)
             {
@@ -122,7 +105,6 @@ public class SteamStoreClient
                     priceEur = finalEl.GetDouble() / 100.0;
             }
 
-            // --- genres array ---
             string? genres = null;
             if (data.TryGetProperty("genres", out var genresArr) && genresArr.ValueKind == JsonValueKind.Array)
             {
@@ -133,7 +115,6 @@ public class SteamStoreClient
                 if (names.Length > 0) genres = string.Join(';', names!);
             }
 
-            // --- categories array ---
             string? categories = null;
             if (data.TryGetProperty("categories", out var catArr) && catArr.ValueKind == JsonValueKind.Array)
             {
@@ -144,7 +125,7 @@ public class SteamStoreClient
                 if (names.Length > 0) categories = string.Join(';', names!);
             }
 
-            return (true, priceEur, isFree, requiredAge, metacritic, genres, categories, type, releaseYear);
+            return (true, appType, releaseYear, priceEur, isFree, requiredAge, metacritic, genres, categories);
         }
     }
 
@@ -204,7 +185,6 @@ public class SteamStoreClient
             if (resp.IsSuccessStatusCode)
                 return (true, body, resp.StatusCode, ctHeader);
 
-            // Handle 429/503 with backoff
             if (resp.StatusCode == (HttpStatusCode)429 || resp.StatusCode == HttpStatusCode.ServiceUnavailable)
             {
                 var wait = GetRetryAfter(resp) ?? TimeSpan.FromSeconds(Math.Min(30, 2 + Math.Pow(2, attempt)));
@@ -251,6 +231,20 @@ public class SteamStoreClient
 
     private static string Snip(string s)
         => string.IsNullOrEmpty(s) ? "" : (s.Length > 300 ? s[..300] + "..." : s);
+
+    private static int? ExtractYear(string s)
+    {
+        // quick scan for 4 consecutive digits
+        for (int i = 0; i + 3 < s.Length; i++)
+        {
+            if (char.IsDigit(s[i]) && char.IsDigit(s[i + 1]) && char.IsDigit(s[i + 2]) && char.IsDigit(s[i + 3]))
+            {
+                if (int.TryParse(s.Substring(i, 4), out var y) && y >= 1970 && y <= DateTime.UtcNow.Year + 1)
+                    return y;
+            }
+        }
+        return null;
+    }
 
     private static double WilsonLowerBound(int positive, int total, double z = 1.96)
     {

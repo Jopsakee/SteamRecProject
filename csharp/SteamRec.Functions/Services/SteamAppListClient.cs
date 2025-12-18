@@ -15,7 +15,9 @@ public class SteamAppListClient
         _http = factory.CreateClient("steam");
         _http.Timeout = TimeSpan.FromSeconds(60);
 
-        _http.DefaultRequestHeaders.UserAgent.ParseAdd("SteamRecProject/1.0 (+AzureFunctions)");
+        if (!_http.DefaultRequestHeaders.UserAgent.Any())
+            _http.DefaultRequestHeaders.UserAgent.ParseAdd("SteamRecProject/1.0 (+AzureFunctions)");
+
         _config = config;
     }
 
