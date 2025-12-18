@@ -28,6 +28,7 @@ public class GameDocument
     public double ReviewRatio { get; set; }
     public double ReviewScoreAdj { get; set; }
 
+    // log10(review_total) (keeps scale stable)
     public double ReviewVolumeLog { get; set; }
 
     public DateTime UpdatedUtc { get; set; } = DateTime.UtcNow;

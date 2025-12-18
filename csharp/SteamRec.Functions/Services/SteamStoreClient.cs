@@ -11,6 +11,9 @@ public class SteamStoreClient
     {
         _http = factory.CreateClient();
         _http.Timeout = TimeSpan.FromSeconds(30);
+
+        if (!_http.DefaultRequestHeaders.UserAgent.Any())
+            _http.DefaultRequestHeaders.UserAgent.ParseAdd("SteamRecProject/1.0 (+AzureFunctions)");
     }
 
     public async Task<(bool ok, double? priceEur, bool? isFree, int? requiredAge, double? metacritic, string? genres, string? categories)> GetAppDetailsAsync(
@@ -40,7 +43,6 @@ public class SteamStoreClient
         double? priceEur = null;
         if (data.TryGetProperty("price_overview", out var priceObj) && priceObj.ValueKind == JsonValueKind.Object)
         {
-            // final is in cents
             if (priceObj.TryGetProperty("final", out var finalEl) && finalEl.ValueKind != JsonValueKind.Null)
                 priceEur = finalEl.GetDouble() / 100.0;
         }
@@ -85,8 +87,6 @@ public class SteamStoreClient
         int total = qs.TryGetProperty("total_reviews", out var t) ? t.GetInt32() : (pos + neg);
 
         double ratio = total > 0 ? (double)pos / total : 0.0;
-
-        // Wilson lower bound (simple “adjusted score”)
         double scoreAdj = WilsonLowerBound(pos, total);
 
         return (true, pos, neg, total, ratio, scoreAdj);
