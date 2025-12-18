@@ -1,5 +1,5 @@
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.DependencyInjection;
 using SteamRec.Functions.Services;
 
 var host = new HostBuilder()
@@ -8,14 +8,12 @@ var host = new HostBuilder()
     {
         services.AddHttpClient();
 
-        // Mongo + repos
         services.AddSingleton<MongoDb>();
         services.AddSingleton<GameRepository>();
         services.AddSingleton<SteamAppRepository>();
 
-        // Steam clients
         services.AddSingleton<SteamStoreClient>();
-        services.AddSingleton<SteamWebApiClient>();
+        services.AddSingleton<SteamAppListClient>();
     })
     .Build();
 

@@ -12,14 +12,13 @@ public class SteamAppDocument
     public int AppId { get; set; }
     public string Name { get; set; } = "";
 
-    // discovery bookkeeping
     public DateTime LastSeenUtc { get; set; } = DateTime.UtcNow;
 
-    // hydration bookkeeping (games collection)
+    // “Hydrated” means we already created/updated a row in games for this appid at least once
     public DateTime? HydratedUtc { get; set; }
 
-    // retry/backoff bookkeeping
+    // Backoff
+    public int FailureCount { get; set; }
     public DateTime? LastAttemptUtc { get; set; }
     public DateTime? NextAttemptUtc { get; set; }
-    public int FailureCount { get; set; }
 }
