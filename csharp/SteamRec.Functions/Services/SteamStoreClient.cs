@@ -12,7 +12,9 @@ public class SteamStoreClient
     public SteamStoreClient(IHttpClientFactory factory, ILogger<SteamStoreClient> log)
     {
         _log = log;
-        _http = factory.CreateClient();
+
+        // IMPORTANT: use the named client configured in Program.cs
+        _http = factory.CreateClient("steam");
         _http.Timeout = TimeSpan.FromSeconds(30);
 
         if (!_http.DefaultRequestHeaders.UserAgent.Any())
@@ -160,7 +162,6 @@ public class SteamStoreClient
             if (resp.IsSuccessStatusCode)
                 return (true, body, resp.StatusCode, ctHeader);
 
-            // Handle 429/503 with backoff
             if (resp.StatusCode == (HttpStatusCode)429 || resp.StatusCode == HttpStatusCode.ServiceUnavailable)
             {
                 var wait = GetRetryAfter(resp) ?? TimeSpan.FromSeconds(Math.Min(30, 2 + Math.Pow(2, attempt)));
@@ -174,7 +175,6 @@ public class SteamStoreClient
                 continue;
             }
 
-            // Other non-200
             _log.LogWarning("[SteamStoreClient] non-200 status={status} ct={ct}. BodySnippet={snippet}",
                 (int)resp.StatusCode, ctHeader ?? "(none)", Snip(body));
 

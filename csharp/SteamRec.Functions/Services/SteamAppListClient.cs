@@ -12,12 +12,10 @@ public class SteamAppListClient
 
     public SteamAppListClient(IHttpClientFactory factory, IConfiguration config)
     {
-        _http = factory.CreateClient();
+        _http = factory.CreateClient("steam");
         _http.Timeout = TimeSpan.FromSeconds(60);
 
-        // Helps avoid occasional blocking
         _http.DefaultRequestHeaders.UserAgent.ParseAdd("SteamRecProject/1.0 (+AzureFunctions)");
-
         _config = config;
     }
 
@@ -39,7 +37,6 @@ public class SteamAppListClient
         if (string.IsNullOrWhiteSpace(key))
             throw new InvalidOperationException("Steam API key missing. Set Steam__ApiKey (Azure) or STEAM_API_KEY (local).");
 
-        // IStoreService/GetAppList supports these query params. 
         var url =
             $"{BaseUrl}?key={Uri.EscapeDataString(key)}" +
             $"&max_results={maxResults}" +
@@ -87,7 +84,6 @@ public class SteamAppListClient
             hmEl.ValueKind != JsonValueKind.Null &&
             hmEl.GetBoolean();
 
-        // Some responses include last_appid; fallback to last returned app in the page
         var newLast = lastAppId;
 
         if (response.TryGetProperty("last_appid", out var lastEl) && lastEl.ValueKind != JsonValueKind.Null)

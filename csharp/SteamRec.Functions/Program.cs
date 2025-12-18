@@ -7,8 +7,8 @@ var host = new HostBuilder()
     .ConfigureFunctionsWorkerDefaults()
     .ConfigureServices(services =>
     {
-        services
-            .AddHttpClient(_ => { }) // <-- this overload returns IHttpClientBuilder
+        // Named HttpClient so we reliably get an IHttpClientBuilder
+        services.AddHttpClient("steam")
             .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
             {
                 AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate
