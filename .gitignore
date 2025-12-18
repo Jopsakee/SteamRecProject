@@ -9,6 +9,5 @@ __pycache__/
 bin/
 obj/
 
-data/raw/appdetails_raw.jsonl
-data/raw/*.jsonl
-data/raw/
+/data/
+/data/**
