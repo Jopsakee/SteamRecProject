@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Net;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
@@ -12,28 +13,35 @@ public class SteamStoreClient
     public SteamStoreClient(IHttpClientFactory factory, ILogger<SteamStoreClient> log)
     {
         _log = log;
-
-        // IMPORTANT: use the named client configured in Program.cs
-        _http = factory.CreateClient("steam");
+        _http = factory.CreateClient();
         _http.Timeout = TimeSpan.FromSeconds(30);
 
         if (!_http.DefaultRequestHeaders.UserAgent.Any())
             _http.DefaultRequestHeaders.UserAgent.ParseAdd("SteamRecProject/1.0 (+AzureFunctions)");
     }
 
-    public async Task<(bool ok, double? priceEur, bool? isFree, int? requiredAge, double? metacritic, string? genres, string? categories)>
-        GetAppDetailsAsync(int appId, string cc = "be", string lang = "en", CancellationToken ct = default)
+    public async Task<(
+        bool ok,
+        double? priceEur,
+        bool? isFree,
+        int? requiredAge,
+        double? metacritic,
+        string? genres,
+        string? categories,
+        string? type,
+        int? releaseYear
+    )> GetAppDetailsAsync(int appId, string cc = "be", string lang = "en", CancellationToken ct = default)
     {
         var url = $"https://store.steampowered.com/api/appdetails?appids={appId}&cc={cc}&l={lang}";
 
         var (okHttp, body, status, contentType) = await GetStringWithRetryAsync(url, ct);
-        if (!okHttp || body is null) return (false, null, null, null, null, null, null);
+        if (!okHttp || body is null) return (false, null, null, null, null, null, null, null, null);
 
         if (!LooksLikeJson(contentType, body))
         {
             _log.LogWarning("[SteamStoreClient] appdetails got non-JSON response appid={appid} status={status} contentType={ct}. BodySnippet={snippet}",
                 appId, (int)status, contentType ?? "(none)", Snip(body));
-            return (false, null, null, null, null, null, null);
+            return (false, null, null, null, null, null, null, null, null);
         }
 
         JsonDocument doc;
@@ -42,20 +50,27 @@ public class SteamStoreClient
         {
             _log.LogWarning(ex, "[SteamStoreClient] appdetails JSON parse failed appid={appid} status={status} ct={ct}. BodySnippet={snippet}",
                 appId, (int)status, contentType ?? "(none)", Snip(body));
-            return (false, null, null, null, null, null, null);
+            return (false, null, null, null, null, null, null, null, null);
         }
 
         using (doc)
         {
-            if (!doc.RootElement.TryGetProperty(appId.ToString(), out var root)) return (false, null, null, null, null, null, null);
-            if (!root.TryGetProperty("success", out var successEl) || successEl.ValueKind != JsonValueKind.True) return (false, null, null, null, null, null, null);
-            if (!root.TryGetProperty("data", out var data) || data.ValueKind != JsonValueKind.Object) return (false, null, null, null, null, null, null);
+            if (!doc.RootElement.TryGetProperty(appId.ToString(), out var root)) return (false, null, null, null, null, null, null, null, null);
+            if (!root.TryGetProperty("success", out var successEl) || successEl.ValueKind != JsonValueKind.True) return (false, null, null, null, null, null, null, null, null);
+            if (!root.TryGetProperty("data", out var data) || data.ValueKind != JsonValueKind.Object) return (false, null, null, null, null, null, null, null, null);
 
+            // --- type (game/dlc/mod/tool/etc.) ---
+            string? type = null;
+            if (data.TryGetProperty("type", out var typeEl) && typeEl.ValueKind == JsonValueKind.String)
+                type = typeEl.GetString();
+
+            // --- is_free ---
             bool? isFree = null;
             if (data.TryGetProperty("is_free", out var isFreeEl) &&
                 (isFreeEl.ValueKind == JsonValueKind.True || isFreeEl.ValueKind == JsonValueKind.False))
                 isFree = isFreeEl.GetBoolean();
 
+            // --- required_age (can be number or string) ---
             int? requiredAge = null;
             if (data.TryGetProperty("required_age", out var ageEl) && ageEl.ValueKind != JsonValueKind.Null)
             {
@@ -65,6 +80,7 @@ public class SteamStoreClient
                     requiredAge = ageStr;
             }
 
+            // --- metacritic.score (can be number or string) ---
             double? metacritic = null;
             if (data.TryGetProperty("metacritic", out var metaObj) && metaObj.ValueKind == JsonValueKind.Object)
             {
@@ -75,6 +91,30 @@ public class SteamStoreClient
                 }
             }
 
+            // --- release year from release_date.date ---
+            int? releaseYear = null;
+            if (data.TryGetProperty("release_date", out var relObj) && relObj.ValueKind == JsonValueKind.Object)
+            {
+                if (relObj.TryGetProperty("date", out var dateEl) && dateEl.ValueKind == JsonValueKind.String)
+                {
+                    var dateStr = dateEl.GetString();
+                    if (!string.IsNullOrWhiteSpace(dateStr))
+                    {
+                        // Prefer en-US formats; Steam often returns "16 Oct, 2014" when lang=en
+                        if (DateTime.TryParse(dateStr, CultureInfo.GetCultureInfo("en-US"),
+                                DateTimeStyles.AllowWhiteSpaces, out var dt)
+                            || DateTime.TryParse(dateStr, CultureInfo.InvariantCulture,
+                                DateTimeStyles.AllowWhiteSpaces, out dt))
+                        {
+                            // ignore nonsense years
+                            if (dt.Year >= 1970 && dt.Year <= DateTime.UtcNow.Year + 1)
+                                releaseYear = dt.Year;
+                        }
+                    }
+                }
+            }
+
+            // --- price_overview.final (in cents) ---
             double? priceEur = null;
             if (data.TryGetProperty("price_overview", out var priceObj) && priceObj.ValueKind == JsonValueKind.Object)
             {
@@ -82,6 +122,7 @@ public class SteamStoreClient
                     priceEur = finalEl.GetDouble() / 100.0;
             }
 
+            // --- genres array ---
             string? genres = null;
             if (data.TryGetProperty("genres", out var genresArr) && genresArr.ValueKind == JsonValueKind.Array)
             {
@@ -92,6 +133,7 @@ public class SteamStoreClient
                 if (names.Length > 0) genres = string.Join(';', names!);
             }
 
+            // --- categories array ---
             string? categories = null;
             if (data.TryGetProperty("categories", out var catArr) && catArr.ValueKind == JsonValueKind.Array)
             {
@@ -102,7 +144,7 @@ public class SteamStoreClient
                 if (names.Length > 0) categories = string.Join(';', names!);
             }
 
-            return (true, priceEur, isFree, requiredAge, metacritic, genres, categories);
+            return (true, priceEur, isFree, requiredAge, metacritic, genres, categories, type, releaseYear);
         }
     }
 
@@ -162,6 +204,7 @@ public class SteamStoreClient
             if (resp.IsSuccessStatusCode)
                 return (true, body, resp.StatusCode, ctHeader);
 
+            // Handle 429/503 with backoff
             if (resp.StatusCode == (HttpStatusCode)429 || resp.StatusCode == HttpStatusCode.ServiceUnavailable)
             {
                 var wait = GetRetryAfter(resp) ?? TimeSpan.FromSeconds(Math.Min(30, 2 + Math.Pow(2, attempt)));
