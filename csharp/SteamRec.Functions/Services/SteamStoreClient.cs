@@ -67,7 +67,6 @@ public class SteamStoreClient
                         releaseYear = dt.Year;
                     else
                     {
-                        // fallback: grab a 4-digit year anywhere in the string
                         var y = ExtractYear(dateStr);
                         if (y.HasValue) releaseYear = y.Value;
                     }

@@ -18,7 +18,6 @@ public class ContentBasedRecommender
     // Expose number of games loaded
     public int GameCount => _games.Count;
 
-    // Match these to your Python W_SIM, W_REV, W_VOL
     private const double W_SIM = 1.8;
     private const double W_REV = 0.5;
     private const double W_VOL = 0.6;
@@ -39,10 +38,6 @@ public class ContentBasedRecommender
 
     public IReadOnlyList<GameRecord> Games => _games;
 
-    /// <summary>
-    /// Recommend games similar to a single reference game (by appId).
-    /// This is what the "By Game" page uses.
-    /// </summary>
     public List<(GameRecord game, double similarity, double overallScore)> RecommendSimilar(
         int appId,
         int topN = 10,
@@ -88,10 +83,7 @@ public class ContentBasedRecommender
             .ToList();
     }
 
-    /// <summary>
     /// Recommend games based on a list of liked appIds (user library).
-    /// This is what the "By Profile" page uses.
-    /// </summary>
     public List<(GameRecord game, double similarity, double overallScore)> RecommendForLiked(
         IEnumerable<int> likedAppIds,
         int topN = 20,

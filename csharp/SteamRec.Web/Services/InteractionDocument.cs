@@ -6,7 +6,6 @@ namespace SteamRec.Web.Services;
 [BsonIgnoreExtraElements]
 public class InteractionDocument
 {
-    // Keep _id so Mongo is happy, but we won't manually set it in upserts.
     [BsonId]
     public ObjectId Id { get; set; }
 

@@ -7,12 +7,11 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddRazorPages();
 builder.Services.AddHttpClient<SteamProfileService>();
 
-// Mongo services (Mongo is now the ONLY source of truth)
 builder.Services.AddSingleton<MongoDb>();
 builder.Services.AddSingleton<GameRepository>();
 builder.Services.AddSingleton<InteractionRepository>();
 
-// Content-based recommender (Mongo ONLY)
+// Content-based recommender
 builder.Services.AddSingleton<ContentBasedRecommender>(sp =>
 {
     var repo = sp.GetRequiredService<GameRepository>();
@@ -63,7 +62,7 @@ builder.Services.AddSingleton<ContentBasedRecommender>(sp =>
     return new ContentBasedRecommender(games);
 });
 
-// Collaborative filtering (Mongo ONLY; if not enough data => stays disabled)
+// Collaborative filtering
 builder.Services.AddSingleton<CollaborativeFilteringRecommender>(sp =>
 {
     var cf = new CollaborativeFilteringRecommender();
@@ -87,9 +86,7 @@ builder.Services.AddSingleton<CollaborativeFilteringRecommender>(sp =>
     }
     catch (Exception ex)
     {
-        // Don't crash the app if CF can't train yet
         Console.WriteLine("[SteamRec] Collaborative model not ready: " + ex.Message);
-        // cf.IsReady will remain false
     }
 
     return cf;
@@ -97,7 +94,7 @@ builder.Services.AddSingleton<CollaborativeFilteringRecommender>(sp =>
 
 var app = builder.Build();
 
-// Force singletons to initialize at startup so you see logs immediately
+// Force singletons to initialize at startup
 using (var scope = app.Services.CreateScope())
 {
     scope.ServiceProvider.GetRequiredService<ContentBasedRecommender>();

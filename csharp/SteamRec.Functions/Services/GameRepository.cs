@@ -40,7 +40,6 @@ public class GameRepository
             .ToListAsync();
     }
 
-    // IMPORTANT: Use UpdateOne(upsert) so we never touch immutable _id.
     public Task UpsertAsync(GameDocument doc)
     {
         if (doc.AppId <= 0) return Task.CompletedTask;

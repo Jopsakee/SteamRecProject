@@ -10,7 +10,7 @@ public class SteamAppRepository
     {
         _col = mongo.Database.GetCollection<SteamAppDocument>("steam_apps");
 
-        // Unique index on AppId (compatible with older MongoDB.Driver)
+        // Unique index on AppIdd
         var idx = Builders<SteamAppDocument>.IndexKeys.Ascending(x => x.AppId);
 
         try

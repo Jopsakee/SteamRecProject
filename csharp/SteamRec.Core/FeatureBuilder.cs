@@ -24,7 +24,6 @@ public class FeatureBuilder
     private Dictionary<string, double> _means = new();
     private Dictionary<string, double> _stds = new();
 
-    // Match these to your Python version
     private const double REVIEW_SCORE_INTERNAL_WEIGHT = 2.0;
     private const double REVIEW_VOL_INTERNAL_WEIGHT = 1.2;
 

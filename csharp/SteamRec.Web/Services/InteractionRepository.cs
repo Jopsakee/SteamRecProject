@@ -10,7 +10,6 @@ public class InteractionRepository
     {
         _col = mongo.Database.GetCollection<InteractionDocument>("interactions");
 
-        // One row per (SteamId, AppId)
         var idx = Builders<InteractionDocument>.IndexKeys
             .Ascending(x => x.SteamId)
             .Ascending(x => x.AppId);
@@ -30,7 +29,7 @@ public class InteractionRepository
             // Filter by natural key
             var filter = Builders<InteractionDocument>.Filter.Where(x => x.SteamId == steamId && x.AppId == d.AppId);
 
-            // Update fields (do NOT touch _id)
+            // Update fields
             var update = Builders<InteractionDocument>.Update
                 .Set(x => x.SteamId, steamId)
                 .Set(x => x.AppId, d.AppId)

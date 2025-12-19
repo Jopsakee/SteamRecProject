@@ -3,7 +3,7 @@ using MongoDB.Bson.Serialization.Attributes;
 
 namespace SteamRec.Web.Services;
 
-[BsonIgnoreExtraElements] // ✅ ignore fields we don't map (like ReviewPositive/ReviewNegative)
+[BsonIgnoreExtraElements]
 public class GameDocument
 {
     [BsonId]
@@ -22,7 +22,6 @@ public class GameDocument
     public int RequiredAge { get; set; }
     public bool IsFree { get; set; }
 
-    // these exist for sure
     public int ReviewTotal { get; set; }
     public double ReviewRatio { get; set; }
     public double ReviewScoreAdj { get; set; }

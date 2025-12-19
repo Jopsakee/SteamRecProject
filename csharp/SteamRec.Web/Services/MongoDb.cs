@@ -8,8 +8,6 @@ public class MongoDb
 
     public MongoDb(IConfiguration config)
     {
-        // Local dev: use user-secrets (Mongo:ConnectionString), or env var (MONGODB_CONNECTION_STRING)
-        // Azure App Service: use App Settings Mongo__ConnectionString / Mongo__Database
         var cs = config["Mongo:ConnectionString"] ?? Environment.GetEnvironmentVariable("MONGODB_CONNECTION_STRING");
         var dbName = config["Mongo:Database"] ?? Environment.GetEnvironmentVariable("MONGODB_DATABASE") ?? "steamrec";
 

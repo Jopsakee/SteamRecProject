@@ -20,9 +20,7 @@ public class SteamSpyClient
             _http.DefaultRequestHeaders.UserAgent.ParseAdd("SteamRecProject/1.0 (+AzureFunctions)");
     }
 
-    /// <summary>
     /// Returns semicolon-delimited top tags (by count), or null if unavailable.
-    /// </summary>
     public async Task<(bool ok, string? tags)> GetTopTagsAsync(int appId, int maxTags = 15, CancellationToken ct = default)
     {
         if (appId <= 0) return (false, null);
@@ -46,9 +44,8 @@ public class SteamSpyClient
             if (root.ValueKind != JsonValueKind.Object) return (false, null);
 
             if (!root.TryGetProperty("tags", out var tagsObj) || tagsObj.ValueKind != JsonValueKind.Object)
-                return (true, null); // ok but no tags
+                return (true, null);
 
-            // tags is an object: { "Action": 1234, "Indie": 900, ... }
             var pairs = new List<(string name, int count)>();
             foreach (var prop in tagsObj.EnumerateObject())
             {

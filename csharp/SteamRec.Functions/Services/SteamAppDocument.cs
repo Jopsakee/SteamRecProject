@@ -14,10 +14,8 @@ public class SteamAppDocument
 
     public DateTime LastSeenUtc { get; set; } = DateTime.UtcNow;
 
-    // “Hydrated” means we already created/updated a row in games for this appid at least once
     public DateTime? HydratedUtc { get; set; }
 
-    // Backoff
     public int FailureCount { get; set; }
     public DateTime? LastAttemptUtc { get; set; }
     public DateTime? NextAttemptUtc { get; set; }
