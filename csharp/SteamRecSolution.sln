@@ -7,6 +7,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SteamRec.Core", "SteamRec.C
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SteamRec.Web", "SteamRec.Web\SteamRec.Web.csproj", "{2E96F83A-B61E-4986-81CA-76D50BF36115}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SteamRec.ML", "SteamRec.ML\SteamRec.ML.csproj", "{048C07E5-EDDA-4AF8-ACC3-AA4ADE2E6D46}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -24,5 +26,9 @@ Global
 		{2E96F83A-B61E-4986-81CA-76D50BF36115}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{2E96F83A-B61E-4986-81CA-76D50BF36115}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{2E96F83A-B61E-4986-81CA-76D50BF36115}.Release|Any CPU.Build.0 = Release|Any CPU
+		{048C07E5-EDDA-4AF8-ACC3-AA4ADE2E6D46}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{048C07E5-EDDA-4AF8-ACC3-AA4ADE2E6D46}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{048C07E5-EDDA-4AF8-ACC3-AA4ADE2E6D46}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{048C07E5-EDDA-4AF8-ACC3-AA4ADE2E6D46}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
