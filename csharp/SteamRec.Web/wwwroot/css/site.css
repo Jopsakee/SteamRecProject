@@ -62,3 +62,48 @@
     --bs-table-hover-bg: #2a475e;
     --bs-table-hover-color: #ffffff;
 }
+
+.rec-hover-card {
+    position: relative;
+    display: inline-block;
+    cursor: pointer;
+}
+
+.rec-hover-card .explain-card {
+    position: absolute;
+    left: 0;
+    top: 100%;
+    background: #101722;
+    color: #c7d5e0;
+    border: 1px solid #1b2838;
+    border-radius: 6px;
+    padding: 12px;
+    width: 460px;
+    z-index: 20;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.15s ease, transform 0.15s ease;
+    transform: translateY(8px);
+}
+
+.rec-hover-card .explain-card.show {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+.rec-hover-card .chart-wrapper {
+    width: 100%;
+    min-height: 220px;
+}
+
+.axis-chip-row .axis-chip {
+    border-color: #2a475e;
+    color: #c7d5e0;
+    background: #0f1c2e;
+}
+
+.progress-thin {
+    height: 6px;
+    background-color: #0f1c2e;
+}

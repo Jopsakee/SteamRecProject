@@ -111,7 +111,62 @@
 
                     <tr>
                         <td>@r.AppId</td>
-                        <td>@r.Name</td>
+                        <td class="position-relative">
+                            <div class="rec-hover-card" data-rec-id="@r.AppId" data-axes='@r.AxesJson'>
+                                <span class="rec-name fw-semibold">@r.Name</span>
+                                <div class="explain-card shadow-lg">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <div>
+                                            <div class="text-uppercase small text-muted">Explainable AI</div>
+                                            <div class="fw-bold">Visuele Verantwoording</div>
+                                        </div>
+                                        <span class="badge bg-info text-dark">Beta</span>
+                                    </div>
+                                    <div class="row g-2 align-items-center">
+                                        <div class="col-md-6">
+                                            <div class="chart-wrapper">
+                                                <canvas id="radar-@r.AppId"
+                                                        aria-label="Radar chart for @r.Name"
+                                                        role="img"></canvas>
+                                            </div>
+                                            <div class="small text-muted mt-1">Je profiel vs. game-profiel (genres/tags)</div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="small text-uppercase text-muted mb-1">Belangrijkste bibliotheek-games</div>
+                                            <ul class="list-unstyled mb-2">
+                                                @foreach (var inf in r.Influencers)
+                                                {
+                                                    <li class="mb-1">
+                                                        <div class="d-flex justify-content-between">
+                                                            <span>@inf.Name</span>
+                                                            <span class="text-muted">@inf.PlaytimeHours.ToString("0.#")h</span>
+                                                        </div>
+                                                        <div class="progress progress-thin">
+                                                            <div class="progress-bar bg-success" role="progressbar"
+                                                                 style="width:@(Math.Clamp(inf.InfluenceScore, 0, 1) * 100)%">
+                                                                @(inf.Similarity.ToString("0.00"))
+                                                            </div>
+                                                        </div>
+                                                    </li>
+                                                }
+                                            </ul>
+                                            <div class="small text-muted">Games die dit advies het meest aandrijven.</div>
+                                        </div>
+                                    </div>
+                                    <div class="mt-2">
+                                        <div class="small text-uppercase text-muted mb-1">As legenda</div>
+                                        <div class="d-flex flex-wrap gap-1 axis-chip-row">
+                                            @foreach (var axis in r.Axes)
+                                            {
+                                                <span class="badge bg-dark border axis-chip" title="@axis.Source">
+                                                    @axis.Name
+                                                </span>
+                                            }
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </td>
                         <td>@r.Similarity.ToString("0.000")</td>
                         <td>@r.OverallScore.ToString("0.000")</td>
                         <td>@r.ReviewTotal</td>
@@ -129,3 +184,8 @@
         </div>
     }
 </div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+}

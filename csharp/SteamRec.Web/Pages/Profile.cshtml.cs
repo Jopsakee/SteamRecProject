@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using SteamRec.Core;
+using System.Text.Json;
 using SteamRec.ML;
 using SteamRec.Web.Services;
 
@@ -118,6 +119,18 @@ public class ProfileModel : PageModel
         if (likedAppIds.Count == 0)
             return Page();
 
+        var likedPreferences = likedAppIds
+            .Select(id =>
+            {
+                var match = matched.First(m => m.AppId == id);
+                return new ContentBasedRecommender.LikedGamePreference
+                {
+                    AppId = id,
+                    Weight = match.PlaytimeMinutes
+                };
+            })
+            .ToList();
+
         // 4) Recommend
         if (Algorithm == "collab" && _cf.IsReady)
         {
@@ -151,16 +164,31 @@ public class ProfileModel : PageModel
         }
         else
         {
-            var recs = _recommender.RecommendForLiked(likedAppIds, topN: 20);
+            var recs = _recommender.RecommendForLikedWithInsights(likedPreferences, topN: 20);
             Recommendations = recs
                 .Select(r => new RecommendationViewModel
                 {
-                    AppId = r.game.AppId,
-                    Name = r.game.Name,
-                    Similarity = r.similarity,
-                    OverallScore = r.overallScore,
-                    ReviewTotal = r.game.ReviewTotal,
-                    ReviewScoreAdj = r.game.ReviewScoreAdj
+                    AppId = r.Game.AppId,
+                    Name = r.Game.Name,
+                    Similarity = r.Similarity,
+                    OverallScore = r.OverallScore,
+                    ReviewTotal = r.Game.ReviewTotal,
+                    ReviewScoreAdj = r.Game.ReviewScoreAdj,
+                    Axes = r.Axes.Select(a => new AxisViewModel
+                    {
+                        Name = a.Name,
+                        Source = a.Source,
+                        UserScore = a.UserScore,
+                        GameScore = a.GameScore
+                    }).ToList(),
+                    Influencers = r.Influencers.Select(i => new InfluenceViewModel
+                    {
+                        AppId = i.AppId,
+                        Name = i.Name,
+                        Similarity = i.Similarity,
+                        InfluenceScore = i.InfluenceScore,
+                        PlaytimeHours = i.Weight / 60.0
+                    }).ToList()
                 })
                 .ToList();
         }
@@ -184,5 +212,27 @@ public class ProfileModel : PageModel
         public double OverallScore { get; set; }
         public int ReviewTotal { get; set; }
         public double ReviewScoreAdj { get; set; }
+        public List<AxisViewModel> Axes { get; set; } = new();
+        public List<InfluenceViewModel> Influencers { get; set; } = new();
+        public string AxesJson => JsonSerializer.Serialize(
+            Axes,
+            new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
+    }
+
+    public class AxisViewModel
+    {
+        public string Name { get; set; } = "";
+        public string Source { get; set; } = "";
+        public double UserScore { get; set; }
+        public double GameScore { get; set; }
+    }
+
+    public class InfluenceViewModel
+    {
+        public int AppId { get; set; }
+        public string Name { get; set; } = "";
+        public double Similarity { get; set; }
+        public double InfluenceScore { get; set; }
+        public double PlaytimeHours { get; set; }
     }
 }
