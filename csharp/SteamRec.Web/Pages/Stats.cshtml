@@ -173,6 +173,8 @@
         options: baseOptions()
     });
 
+    const priceTotal = priceCounts.reduce((sum, value) => sum + value, 0);
+
     new Chart(document.getElementById("priceChart"), {
         type: "doughnut",
         data: {
@@ -190,6 +192,15 @@
                 legend: {
                     position: "bottom",
                     labels: { color: axisColor }
+                    },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const value = context.parsed || 0;
+                            const pct = priceTotal > 0 ? (value / priceTotal) * 100 : 0;
+                            return `${context.label}: ${value} (${pct.toFixed(1)}%)`;
+                        }
+                    }
                 }
             }
         }
