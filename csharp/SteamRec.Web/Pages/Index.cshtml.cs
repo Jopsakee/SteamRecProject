@@ -4,6 +4,7 @@ using System.Linq;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using SteamRec.Core;
+using SteamRec.Web.Services;
 
 namespace SteamRec.Web.Pages;
 
@@ -62,7 +63,8 @@ public class IndexModel : PageModel
                 Similarity = r.similarity,
                 OverallScore = r.overallScore,
                 ReviewTotal = r.game.ReviewTotal,
-                ReviewScoreAdj = r.game.ReviewScoreAdj
+                ReviewScoreAdj = r.game.ReviewScoreAdj,
+                ThumbnailUrl = SteamImageHelper.BuildCapsuleUrl(r.game.AppId)
             })
             .ToList();
     }
@@ -75,5 +77,6 @@ public class IndexModel : PageModel
         public double OverallScore { get; set; }
         public int ReviewTotal { get; set; }
         public double ReviewScoreAdj { get; set; }
+        public string ThumbnailUrl { get; set; } = "";
     }
 }

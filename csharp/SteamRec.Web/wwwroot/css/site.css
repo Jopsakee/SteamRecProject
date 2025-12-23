@@ -62,3 +62,10 @@
     --bs-table-hover-bg: #2a475e;
     --bs-table-hover-color: #ffffff;
 }
+
+.steam-thumb {
+    width: 140px;
+    height: auto;
+    border-radius: 4px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.6);
+}
