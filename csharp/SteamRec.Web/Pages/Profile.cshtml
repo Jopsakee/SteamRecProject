@@ -84,7 +84,7 @@
             <table class="table table-dark table-striped table-sm mb-0">
                 <thead>
                     <tr>
-                        <th>Thumbnail</th>
+                        <th></th>
                         <th>AppID</th>
                         <th>Name</th>
                         <th>Playtime (hours)</th>
@@ -93,11 +93,13 @@
                 <tbody>
                     @foreach (var g in Model.MatchedOwnedGames.Take(25))
                     {
+                        var storeUrl = !string.IsNullOrEmpty(g.StoreUrl)
+                            ? g.StoreUrl
+                            : $"https://store.steampowered.com/app/{g.AppId}/";
                         <tr>
                             <td>
                                 @if (!string.IsNullOrEmpty(g.ThumbnailUrl))
                                 {
-                                    var storeUrl = g.StoreUrl;
                                     if (!string.IsNullOrEmpty(storeUrl))
                                     {
                                         <a href="@storeUrl" target="_blank" rel="noreferrer noopener" class="steam-game-link">
@@ -112,9 +114,9 @@
                             </td>
                             <td>@g.AppId</td>
                             <td>
-                                @if (!string.IsNullOrEmpty(g.StoreUrl))
+                                @if (!string.IsNullOrEmpty(storeUrl))
                                 {
-                                    <a href="@g.StoreUrl" target="_blank" rel="noreferrer noopener" class="steam-game-link">@g.Name</a>
+                                    <a href="@storeUrl" target="_blank" rel="noreferrer noopener" class="steam-game-link">@g.Name</a>
                                 }
                                 else
                                 {
@@ -136,6 +138,7 @@
             <table class="table table-dark table-striped table-sm mb-0">
                 <thead>
                     <tr>
+                        <th></th>
                         <th>AppID</th>
                         <th>Name</th>
                         <th>Similarity / CF Score</th>
@@ -150,12 +153,14 @@
                     var pct = Math.Clamp(r.ReviewScoreAdj, 0.0, 1.0) * 100.0;
                     var label = ReviewLabel(r.ReviewScoreAdj, r.ReviewTotal);
                     var badge = ReviewBadgeClass(r.ReviewScoreAdj, r.ReviewTotal);
+                    var storeUrl = !string.IsNullOrEmpty(r.StoreUrl)
+                        ? r.StoreUrl
+                        : $"https://store.steampowered.com/app/{r.AppId}/";
 
                     <tr>
                         <td>
                             @if (!string.IsNullOrEmpty(r.ThumbnailUrl))
                             {
-                                var storeUrl = r.StoreUrl;
                                 if (!string.IsNullOrEmpty(storeUrl))
                                 {
                                     <a href="@storeUrl" target="_blank" rel="noreferrer noopener" class="steam-game-link">
@@ -170,9 +175,9 @@
                         </td>
                         <td>@r.AppId</td>
                         <td>
-                            @if (!string.IsNullOrEmpty(r.StoreUrl))
+                            @if (!string.IsNullOrEmpty(storeUrl))
                             {
-                                <a href="@r.StoreUrl" target="_blank" rel="noreferrer noopener" class="steam-game-link">@r.Name</a>
+                                <a href="@storeUrl" target="_blank" rel="noreferrer noopener" class="steam-game-link">@r.Name</a>
                             }
                             else
                             {
