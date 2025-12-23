@@ -4,6 +4,7 @@
 # Negeer Python cache (handig voor je scripts)
 __pycache__/
 *.pyc
+src/data/__pycache__/
 
 # Negeer build mappen van C#
 bin/
