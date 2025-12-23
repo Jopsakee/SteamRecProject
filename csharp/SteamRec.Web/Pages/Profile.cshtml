@@ -33,12 +33,14 @@
 <div class="steam-container mt-4">
     <h1 class="steam-title mb-3">Steam Profile Recommender</h1>
     <p class="steam-subtitle">Enter your SteamID64 to get recommendations based on your library.</p>
-    <p class="text-muted">Loaded games in catalogue: @Model.TotalGames</p>
+    <p class="text-muted">Loaded games: @Model.TotalGames</p>
 
     <form method="post" class="mb-4 steam-card p-3">
+        <div asp-validation-summary="ModelOnly" class="alert alert-warning"></div>
         <div class="mb-3">
             <label asp-for="SteamId" class="form-label">SteamID64</label>
             <input asp-for="SteamId" class="form-control" placeholder="e.g. 7656119XXXXXXXXXX" />
+            <span asp-validation-for="SteamId" class="text-warning"></span>
         </div>
 
         <div class="mb-3">
@@ -54,12 +56,26 @@
         <div class="form-check mb-3">
             <input asp-for="ContributeToCollaborative" class="form-check-input" type="checkbox" />
             <label asp-for="ContributeToCollaborative" class="form-check-label">
-                Add my library to interactions.csv (to improve collaborative model)
+                Use my game library data to improve model
             </label>
         </div>
 
-        <button type="submit" class="btn steam-btn-primary">Load my library</button>
+        <button type="submit" class="btn steam-btn-primary">Get recommendations</button>
     </form>
+    @if (Model.ShowPrivacyGuide){
+    <div class="steam-card p-3 mb-4 border border-warning">
+        <h5 class="mb-2">Is your profile private?</h5>
+        <p class="mb-2">Steam requires your profile and game details to be public so we can load your library. If your SteamID64 returns a private profile warning, update your privacy settings:</p>
+        <ol class="mb-0">
+            <li>Open Steam &gt; click your username &gt; <strong>View my profile</strong>.</li>
+            <li>Click <strong>Edit Profile</strong> and select <strong>Privacy Settings</strong> in the sidebar. Or click <a href=https://steamcommunity.com/id/Jopsakee/edit/settings>here</a></li>
+            <li>Set <strong>My Profile</strong> to <em>Public</em>.</li>
+            <li>Set <strong>Game details</strong> to <em>Public</em> and uncheck “Keep game details private”.</li>
+            <li>Save, then return here and reload your library.</li>
+        </ol>
+    </div>
+    }
+
 
     @if (Model.MatchedOwnedGames.Any())
     {
