@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using SteamRec.Core;
 using SteamRec.ML;
 using SteamRec.Web.Services;
+using static SteamRec.Web.Services.SteamProfileService;
 
 namespace SteamRec.Web.Pages;
 
@@ -41,6 +42,7 @@ public class ProfileModel : PageModel
 
     public bool CollaborativeAvailable => _cf.IsReady;
     public int TotalGames => _recommender.GameCount;
+    public bool ShowPrivacyGuide { get; private set; }
 
     public List<OwnedGameViewModel> MatchedOwnedGames { get; private set; } = new();
     public List<RecommendationViewModel> Recommendations { get; private set; } = new();
@@ -55,9 +57,19 @@ public class ProfileModel : PageModel
         var steamId = SteamId.Trim();
 
         // 1) Fetch owned games from Steam
-        var owned = await _profileService.GetOwnedGamesAsync(steamId);
+        List<SteamProfileService.OwnedGame> owned;
+        try
+        {
+            owned = await _profileService.GetOwnedGamesAsync(steamId);
+        }
+        catch (PrivateProfileException pex)
+        {
+            ModelState.AddModelError(nameof(SteamId), pex.Message);
+            ShowPrivacyGuide = true;
+            return Page();
+        }
 
-        // 2) Store interactions if opted-in (Mongo ONLY)
+        // 2) Store interactions if opted-in
         if (ContributeToCollaborative)
         {
             var meaningful = owned
@@ -79,7 +91,6 @@ public class ProfileModel : PageModel
             }
             catch (Exception ex)
             {
-                // We don't fallback to CSV anymore, so show a friendly error
                 ModelState.AddModelError(string.Empty, "Could not save interactions to MongoDB: " + ex.Message);
             }
         }
