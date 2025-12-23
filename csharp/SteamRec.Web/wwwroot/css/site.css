@@ -205,6 +205,8 @@
 .meta-badge.game {
     background: rgba(110, 229, 159, 0.22);
     border: 1px solid rgba(110, 229, 159, 0.6);
+}
+
 .steam-thumb {
     width: 140px;
     height: auto;
@@ -265,5 +267,4 @@
     to {
         transform: rotate(360deg);
     }
-}
 }
