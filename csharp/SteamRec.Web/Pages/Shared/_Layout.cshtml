@@ -23,6 +23,9 @@
                         <li class="nav-item">
                             <a class="nav-link @(Context.Request.Path.StartsWithSegments("/Profile") ? "active" : "")" asp-page="/Profile">By Profile</a>
                         </li>
+                        <li class="nav-item">
+                            <a class="nav-link @(Context.Request.Path.StartsWithSegments("/Stats") ? "active" : "")" asp-page="/Stats">Stats</a>
+                        </li>
                     </ul>
                 </div>
             </div>

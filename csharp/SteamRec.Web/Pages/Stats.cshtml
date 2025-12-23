@@ -1,0 +1,198 @@
+@page
+@using System.Text.Json
+@model SteamRec.Web.Pages.StatsModel
+@{
+    ViewData["Title"] = "Stats";
+    var jsonOptions = new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
+    var tagLabels = JsonSerializer.Serialize(Model.TopTags.Select(x => x.Label), jsonOptions);
+    var tagCounts = JsonSerializer.Serialize(Model.TopTags.Select(x => x.Count), jsonOptions);
+    var topPlayedLabels = JsonSerializer.Serialize(Model.TopPlayedGames.Select(x => x.Label), jsonOptions);
+    var topPlayedCounts = JsonSerializer.Serialize(Model.TopPlayedGames.Select(x => x.Count), jsonOptions);
+    var yearLabels = JsonSerializer.Serialize(Model.ReleaseYears.Select(x => x.Label), jsonOptions);
+    var yearCounts = JsonSerializer.Serialize(Model.ReleaseYears.Select(x => x.Count), jsonOptions);
+    var priceLabels = JsonSerializer.Serialize(Model.PriceBuckets.Select(x => x.Label), jsonOptions);
+    var priceCounts = JsonSerializer.Serialize(Model.PriceBuckets.Select(x => x.Count), jsonOptions);
+}
+
+<div class="steam-container mt-4">
+    <h1 class="steam-title mb-2">Game Stats</h1>
+    <p class="steam-subtitle">A quick look at the shape of the Steam dataset.</p>
+
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="steam-card p-3 h-100">
+                <div class="text-muted text-uppercase" style="font-size: 0.75rem;">Total games</div>
+                <div class="fs-3 fw-bold">@Model.TotalGames</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="steam-card p-3 h-100">
+                <div class="text-muted text-uppercase" style="font-size: 0.75rem;">Free titles</div>
+                <div class="fs-3 fw-bold">@Model.FreeGames</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="steam-card p-3 h-100">
+                <div class="text-muted text-uppercase" style="font-size: 0.75rem;">Avg. paid price</div>
+                <div class="fs-3 fw-bold">€@Model.AveragePrice.ToString("0.00")</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="steam-card p-3 h-100">
+                <div class="text-muted text-uppercase" style="font-size: 0.75rem;">Avg. Metacritic</div>
+                <div class="fs-3 fw-bold">@Model.AverageMetacritic.ToString("0.0")</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-lg-6">
+            <div class="steam-card p-3 h-100">
+                <h2 class="steam-section-title">Top user tags</h2>
+                <canvas id="tagChart" height="220"></canvas>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="steam-card p-3 h-100">
+                <h2 class="steam-section-title">Top played games (by reviews)</h2>
+                <canvas id="topPlayedChart" height="220"></canvas>
+            </div>
+        </div>
+        <div class="col-lg-7">
+            <div class="steam-card p-3 h-100">
+                <h2 class="steam-section-title">Release timeline</h2>
+                <canvas id="yearChart" height="240"></canvas>
+            </div>
+        </div>
+        <div class="col-lg-5">
+            <div class="steam-card p-3 h-100">
+                <h2 class="steam-section-title">Price mix</h2>
+                <canvas id="priceChart" height="240"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    const tagLabels = @Html.Raw(tagLabels);
+    const tagCounts = @Html.Raw(tagCounts);
+    const topPlayedLabels = @Html.Raw(topPlayedLabels);
+    const topPlayedCounts = @Html.Raw(topPlayedCounts);
+    const yearLabels = @Html.Raw(yearLabels);
+    const yearCounts = @Html.Raw(yearCounts);
+    const priceLabels = @Html.Raw(priceLabels);
+    const priceCounts = @Html.Raw(priceCounts);
+
+    const sharedColors = [
+        "#66c0f4",
+        "#f5c542",
+        "#f28b82",
+        "#a7c5eb",
+        "#b39ddb",
+        "#ffb74d",
+        "#4dd0e1",
+        "#81c784",
+        "#ce93d8",
+        "#ff8a65",
+        "#90caf9",
+        "#6ee59f",
+    ];
+
+    const axisColor = "#9fb7cc";
+    const gridColor = "rgba(255, 255, 255, 0.08)";
+
+    function baseOptions() {
+        return {
+            responsive: true,
+            plugins: {
+                legend: {
+                    display: false,
+                    labels: { color: axisColor }
+                },
+                tooltip: {
+                    backgroundColor: "rgba(27, 40, 56, 0.95)",
+                    borderColor: "rgba(102, 192, 244, 0.4)",
+                    borderWidth: 1,
+                    titleColor: "#ffffff",
+                    bodyColor: "#c7d5e0"
+                }
+            },
+            scales: {
+                x: {
+                    ticks: { color: axisColor },
+                    grid: { color: gridColor }
+                },
+                y: {
+                    ticks: { color: axisColor },
+                    grid: { color: gridColor },
+                    beginAtZero: true
+                }
+            }
+        };
+    }
+
+    new Chart(document.getElementById("tagChart"), {
+        type: "bar",
+        data: {
+            labels: tagLabels,
+            datasets: [{
+                label: "Games",
+                data: tagCounts,
+                backgroundColor: sharedColors
+            }]
+        },
+        options: baseOptions()
+    });
+
+    new Chart(document.getElementById("topPlayedChart"), {
+        type: "bar",
+        data: {
+            labels: topPlayedLabels,
+            datasets: [{
+                label: "Total reviews",
+                data: topPlayedCounts,
+                backgroundColor: sharedColors
+            }]
+        },
+        options: baseOptions()
+    });
+
+    new Chart(document.getElementById("yearChart"), {
+        type: "bar",
+        data: {
+            labels: yearLabels,
+            datasets: [{
+                label: "Games",
+                data: yearCounts,
+                backgroundColor: "rgba(102, 192, 244, 0.5)",
+                borderColor: "#66c0f4",
+                borderWidth: 1
+            }]
+        },
+        options: baseOptions()
+    });
+
+    new Chart(document.getElementById("priceChart"), {
+        type: "doughnut",
+        data: {
+            labels: priceLabels,
+            datasets: [{
+                data: priceCounts,
+                backgroundColor: sharedColors,
+                borderColor: "#1b2838",
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: "bottom",
+                    labels: { color: axisColor }
+                }
+            }
+        }
+    });
+</script>
+}
