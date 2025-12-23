@@ -105,7 +105,8 @@ public class ProfileModel : PageModel
                 AppId = g.AppId,
                 Name = g.Name,
                 PlaytimeMinutes = ownedById[g.AppId],
-                ThumbnailUrl = SteamImageHelper.BuildCapsuleUrl(g.AppId)
+                ThumbnailUrl = SteamImageHelper.BuildCapsuleUrl(g.AppId),
+                StoreUrl = SteamImageHelper.BuildStorePageUrl(g.AppId)
             })
             .OrderByDescending(x => x.PlaytimeMinutes)
             .ToList();
@@ -157,7 +158,8 @@ public class ProfileModel : PageModel
                         OverallScore = s.score,
                         ReviewTotal = game.ReviewTotal,
                         ReviewScoreAdj = game.ReviewScoreAdj,
-                        ThumbnailUrl = SteamImageHelper.BuildCapsuleUrl((int)s.appId)
+                        ThumbnailUrl = SteamImageHelper.BuildCapsuleUrl((int)s.appId),
+                        StoreUrl = SteamImageHelper.BuildStorePageUrl((int)s.appId)
                     };
                 })
                 .ToList();
@@ -189,6 +191,7 @@ public class ProfileModel : PageModel
         public int PlaytimeMinutes { get; set; }
         public double PlaytimeHours => PlaytimeMinutes / 60.0;
         public string ThumbnailUrl { get; set; } = "";
+        public string StoreUrl { get; set; } = "";
     }
 
     public class RecommendationViewModel
@@ -200,5 +203,6 @@ public class ProfileModel : PageModel
         public int ReviewTotal { get; set; }
         public double ReviewScoreAdj { get; set; }
         public string ThumbnailUrl { get; set; } = "";
+        public string StoreUrl { get; set; } = "";
     }
 }

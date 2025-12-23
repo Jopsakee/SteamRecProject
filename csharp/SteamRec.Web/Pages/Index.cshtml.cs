@@ -64,7 +64,8 @@ public class IndexModel : PageModel
                 OverallScore = r.overallScore,
                 ReviewTotal = r.game.ReviewTotal,
                 ReviewScoreAdj = r.game.ReviewScoreAdj,
-                ThumbnailUrl = SteamImageHelper.BuildCapsuleUrl(r.game.AppId)
+                ThumbnailUrl = SteamImageHelper.BuildCapsuleUrl(r.game.AppId),
+                StoreUrl = SteamImageHelper.BuildStorePageUrl(r.game.AppId)
             })
             .ToList();
     }
@@ -78,5 +79,6 @@ public class IndexModel : PageModel
         public int ReviewTotal { get; set; }
         public double ReviewScoreAdj { get; set; }
         public string ThumbnailUrl { get; set; } = "";
+        public string StoreUrl { get; set; } = "";
     }
 }

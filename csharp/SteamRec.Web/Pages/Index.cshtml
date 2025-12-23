@@ -91,11 +91,30 @@
                         <td>
                             @if (!string.IsNullOrEmpty(r.ThumbnailUrl))
                             {
-                                <img src="@r.ThumbnailUrl" alt="@($"{r.Name} capsule")" class="steam-thumb" loading="lazy" />
+                                var storeUrl = r.StoreUrl;
+                                if (!string.IsNullOrEmpty(storeUrl))
+                                {
+                                    <a href="@storeUrl" target="_blank" rel="noreferrer noopener" class="steam-game-link">
+                                        <img src="@r.ThumbnailUrl" alt="@($"{r.Name} capsule")" class="steam-thumb" loading="lazy" />
+                                    </a>
+                                }
+                                else
+                                {
+                                    <img src="@r.ThumbnailUrl" alt="@($"{r.Name} capsule")" class="steam-thumb" loading="lazy" />
+                                }
                             }
                         </td>
                         <td>@r.AppId</td>
-                        <td>@r.Name</td>
+                        <td>
+                            @if (!string.IsNullOrEmpty(r.StoreUrl))
+                            {
+                                <a href="@r.StoreUrl" target="_blank" rel="noreferrer noopener" class="steam-game-link">@r.Name</a>
+                            }
+                            else
+                            {
+                                @r.Name
+                            }
+                        </td>
                         <td>@r.Similarity.ToString("0.000")</td>
                         <td>@r.OverallScore.ToString("0.000")</td>
                         <td>@r.ReviewTotal</td>
