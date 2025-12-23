@@ -30,6 +30,13 @@
     }
 }
 
+<div id="loading-overlay" class="loading-overlay" aria-hidden="true">
+    <div class="loading-overlay__content" role="status" aria-live="polite">
+        <span class="loading-overlay__spinner" aria-hidden="true"></span>
+        <span class="loading-overlay__text">Loading...</span>
+    </div>
+</div>
+
 <div class="steam-container mt-4">
     <h1 class="steam-title mb-3">Steam Profile Recommender</h1>
     <p class="steam-subtitle">Enter your SteamID64 to get recommendations based on your library.</p>
@@ -201,3 +208,20 @@
         </div>
     }
 </div>
+@section Scripts {
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            var overlay = document.getElementById("loading-overlay");
+            var form = document.querySelector("form");
+
+            if (!overlay || !form) {
+                return;
+            }
+
+            form.addEventListener("submit", function () {
+                overlay.classList.add("is-active");
+                overlay.setAttribute("aria-hidden", "false");
+            });
+        });
+    </script>
+}
