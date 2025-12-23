@@ -1,6 +1,6 @@
 .steam-body {
     background-color: #171a21;
-    background-image: linear-gradient(rgba(23, 26, 33, 0.85), rgba(23, 26, 33, 0.85)), url("csharp\SteamRec.Web\wwwroot\images\steamRecBackground.jpg");
+    background-image: linear-gradient(rgba(23, 26, 33, 0.85), rgba(23, 26, 33, 0.85)), url("/wwwroot/images/steamRecBackground.jpg");
     background-position: center;
     background-repeat: no-repeat;
     background-size: cover;
