@@ -62,7 +62,11 @@ public class IndexModel : PageModel
                 Similarity = r.similarity,
                 OverallScore = r.overallScore,
                 ReviewTotal = r.game.ReviewTotal,
-                ReviewScoreAdj = r.game.ReviewScoreAdj
+                ReviewScoreAdj = r.game.ReviewScoreAdj,
+                PriceEur = r.game.PriceEur,
+                MetacriticScore = r.game.MetacriticScore,
+                ReleaseYear = r.game.ReleaseYear,
+                RequiredAge = r.game.RequiredAge
             })
             .ToList();
     }
@@ -75,5 +79,9 @@ public class IndexModel : PageModel
         public double OverallScore { get; set; }
         public int ReviewTotal { get; set; }
         public double ReviewScoreAdj { get; set; }
+        public double PriceEur { get; set; }
+        public double MetacriticScore { get; set; }
+        public int ReleaseYear { get; set; }
+        public int RequiredAge { get; set; }
     }
 }

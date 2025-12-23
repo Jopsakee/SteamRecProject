@@ -1,4 +1,5 @@
 @page
+@using System.Globalization
 @model SteamRec.Web.Pages.ProfileModel
 @{
     ViewData["Title"] = "Profile-based Recommendations";
@@ -91,7 +92,9 @@
     {
         <h2 class="steam-section-title">Recommended for You</h2>
         <div class="steam-card p-3">
-            <table class="table table-dark table-striped table-sm mb-0">
+            <table class="table table-dark table-striped table-sm mb-0"
+                   data-radar-labels="@Model.SerializeRadarLabels()"
+                   data-radar-user="@Model.SerializeValues(Model.UserRadarValues)">
                 <thead>
                     <tr>
                         <th>AppID</th>
@@ -109,7 +112,11 @@
                     var label = ReviewLabel(r.ReviewScoreAdj, r.ReviewTotal);
                     var badge = ReviewBadgeClass(r.ReviewScoreAdj, r.ReviewTotal);
 
-                    <tr>
+                    <tr class="recommendation-row"
+                        data-recommendation-row="true"
+                        data-app-id="@r.AppId"
+                        data-game-name="@r.Name"
+                        data-game-radar="@Model.SerializeValues(r.GameRadarValues)">
                         <td>@r.AppId</td>
                         <td>@r.Name</td>
                         <td>@r.Similarity.ToString("0.000")</td>
