@@ -1,4 +1,5 @@
 ﻿@page
+@using System.Globalization
 @model SteamRec.Web.Pages.IndexModel
 @{
     ViewData["Title"] = "Steam Game Recommender";
@@ -90,7 +91,15 @@
                         ? r.StoreUrl
                         : $"https://store.steampowered.com/app/{r.AppId}/";
 
-                    <tr>
+                    <tr class="recommendation-row"
+                        data-recommendation-row="true"
+                        data-app-id="@r.AppId"
+                        data-game-name="@r.Name"
+                        data-price="@r.PriceEur.ToString(CultureInfo.InvariantCulture)"
+                        data-metacritic="@r.MetacriticScore.ToString(CultureInfo.InvariantCulture)"
+                        data-year="@r.ReleaseYear"
+                        data-age="@r.RequiredAge"
+                        data-review="@r.ReviewScoreAdj.ToString(CultureInfo.InvariantCulture)">
                         <td>
                             @if (!string.IsNullOrEmpty(r.ThumbnailUrl))
                             {

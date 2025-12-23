@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
@@ -46,6 +47,8 @@ public class ProfileModel : PageModel
 
     public List<OwnedGameViewModel> MatchedOwnedGames { get; private set; } = new();
     public List<RecommendationViewModel> Recommendations { get; private set; } = new();
+    public List<string> RadarLabels { get; private set; } = new();
+    public List<double> UserRadarValues { get; private set; } = new();
 
     public void OnGet() { }
 
@@ -131,6 +134,8 @@ public class ProfileModel : PageModel
         if (likedAppIds.Count == 0)
             return Page();
 
+        BuildRadarProfile(likedAppIds);
+
         // 4) Recommend
         if (Algorithm == "collab" && _cf.IsReady)
         {
@@ -158,6 +163,11 @@ public class ProfileModel : PageModel
                         OverallScore = s.score,
                         ReviewTotal = game.ReviewTotal,
                         ReviewScoreAdj = game.ReviewScoreAdj,
+                        PriceEur = game.PriceEur,
+                        MetacriticScore = game.MetacriticScore,
+                        ReleaseYear = game.ReleaseYear,
+                        RequiredAge = game.RequiredAge,
+                        GameRadarValues = BuildRadarVector(game),
                         ThumbnailUrl = SteamImageHelper.BuildCapsuleUrl((int)s.appId),
                         StoreUrl = SteamImageHelper.BuildStorePageUrl((int)s.appId)
                     };
@@ -174,11 +184,16 @@ public class ProfileModel : PageModel
                     Name = r.game.Name,
                     Similarity = r.similarity,
                     OverallScore = r.overallScore,
-                    ReviewTotal = r.game.ReviewTotal,
-                    ReviewScoreAdj = r.game.ReviewScoreAdj,
-                    ThumbnailUrl = SteamImageHelper.BuildCapsuleUrl(r.game.AppId)
-                })
-                .ToList();
+                        ReviewTotal = r.game.ReviewTotal,
+                        ReviewScoreAdj = r.game.ReviewScoreAdj,
+                        ThumbnailUrl = SteamImageHelper.BuildCapsuleUrl(r.game.AppId),
+                        PriceEur = r.game.PriceEur,
+                        MetacriticScore = r.game.MetacriticScore,
+                        ReleaseYear = r.game.ReleaseYear,
+                        RequiredAge = r.game.RequiredAge,
+                        GameRadarValues = BuildRadarVector(r.game)
+                    })
+                    .ToList();
         }
 
         return Page();
@@ -202,7 +217,62 @@ public class ProfileModel : PageModel
         public double OverallScore { get; set; }
         public int ReviewTotal { get; set; }
         public double ReviewScoreAdj { get; set; }
+        public double PriceEur { get; set; }
+        public double MetacriticScore { get; set; }
+        public int ReleaseYear { get; set; }
+        public int RequiredAge { get; set; }
+        public List<double> GameRadarValues { get; set; } = new();
         public string ThumbnailUrl { get; set; } = "";
         public string StoreUrl { get; set; } = "";
     }
+
+    private void BuildRadarProfile(List<int> likedAppIds)
+    {
+        var freq = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var appId in likedAppIds)
+        {
+            var game = _games.FirstOrDefault(g => g.AppId == appId);
+            if (game == null) continue;
+
+            foreach (var tag in game.Tags) Increment(freq, tag);
+            foreach (var genre in game.Genres) Increment(freq, genre);
+        }
+
+        RadarLabels = freq
+            .OrderByDescending(kv => kv.Value)
+            .ThenBy(kv => kv.Key, StringComparer.OrdinalIgnoreCase)
+            .Take(6)
+            .Select(kv => kv.Key)
+            .ToList();
+
+        var max = freq.Values.DefaultIfEmpty(1).Max();
+        UserRadarValues = RadarLabels
+            .Select(label => freq.TryGetValue(label, out var count) ? count / (double)max : 0.0)
+            .ToList();
+    }
+
+    private static void Increment(Dictionary<string, int> freq, string key)
+    {
+        if (!freq.ContainsKey(key))
+            freq[key] = 0;
+        freq[key]++;
+    }
+
+    private List<double> BuildRadarVector(GameRecord game)
+    {
+        if (RadarLabels.Count == 0) return new();
+
+        bool ContainsLabel(GameRecord g, string label)
+            => g.Tags.Contains(label) || g.Genres.Contains(label) || g.Categories.Contains(label);
+
+        return RadarLabels
+            .Select(label => ContainsLabel(game, label) ? 1.0 : 0.0)
+            .ToList();
+    }
+
+    public string SerializeRadarLabels() => string.Join("|", RadarLabels);
+
+    public string SerializeValues(IEnumerable<double> values) =>
+        string.Join(",", values.Select(v => v.ToString("0.###", CultureInfo.InvariantCulture)));
 }

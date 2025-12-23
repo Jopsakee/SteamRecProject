@@ -68,6 +68,145 @@
     --bs-table-hover-color: #ffffff;
 }
 
+/* Dashboard */
+
+#radar-hover-card {
+    position: fixed;
+    background: linear-gradient(145deg, rgba(11, 20, 28, 0.98), rgba(16, 28, 40, 0.98));
+    color: #c7d5e0;
+    border: 1px solid rgba(102, 192, 244, 0.25);
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.7);
+    border-radius: 10px;
+    padding: 10px 12px;
+    width: 380px;
+    z-index: 1050;
+    display: none;
+    pointer-events: none;
+}
+
+#radar-hover-card.visible {
+    display: block;
+}
+
+.radar-hover-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 6px;
+}
+
+.radar-hover-title {
+    font-weight: 700;
+    color: #ffffff;
+    font-size: 1.05rem;
+}
+
+.radar-hover-pill {
+    background: #66c0f4;
+    color: #001018;
+    font-weight: 700;
+    border-radius: 999px;
+    padding: 2px 10px;
+    font-size: 0.72rem;
+    text-transform: uppercase;
+}
+
+.radar-hover-subtitle {
+    color: #8fb4d3;
+    font-size: 0.85rem;
+    margin-bottom: 10px;
+}
+
+.radar-hover-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 8px;
+    align-items: stretch;
+}
+
+.radar-hover-chart {
+    background: linear-gradient(135deg, rgba(102, 192, 244, 0.1), rgba(102, 192, 244, 0.03));
+    border: 1px solid rgba(102, 192, 244, 0.4);
+    border-radius: 10px;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    align-items: center;
+}
+
+.radar-hover-meta {
+    background: rgba(21, 31, 44, 0.9);
+    border: 1px solid rgba(255, 255, 255, 0.04);
+    border-radius: 10px;
+    padding: 8px;
+    font-size: 0.85rem;
+}
+
+.radar-hover-meta .meta-label {
+    text-transform: uppercase;
+    color: #9fc9ea;
+    font-weight: 700;
+    font-size: 0.72rem;
+    letter-spacing: 0.03em;
+    margin-bottom: 6px;
+}
+
+.meta-list {
+    list-style: none;
+    padding-left: 0;
+    margin: 0;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+}
+
+.meta-list li {
+    display: block;
+    background: rgba(13, 20, 28, 0.8);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+    padding: 8px 10px;
+    color: #c7d5e0;
+}
+
+.meta-row {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.meta-axis {
+    color: #9fb7cc;
+    font-weight: 700;
+    font-size: 0.86rem;
+}
+
+.meta-values {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.meta-badge {
+    color: #ffffff;
+    font-weight: 700;
+    padding: 4px 7px;
+    border-radius: 6px;
+    font-size: 0.78rem;
+}
+
+
+.meta-badge.user {
+    background: rgba(102, 192, 244, 0.25);
+    border: 1px solid rgba(102, 192, 244, 0.6);
+}
+
+.meta-badge.game {
+    background: rgba(110, 229, 159, 0.22);
+    border: 1px solid rgba(110, 229, 159, 0.6);
+}
+
 .steam-thumb {
     width: 140px;
     height: auto;
