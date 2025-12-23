@@ -1,3 +1,4 @@
+using Microsoft.Extensions.FileProviders;
 using SteamRec.Core;
 using SteamRec.ML;
 using SteamRec.Web.Services;
@@ -106,6 +107,13 @@ if (!app.Environment.IsDevelopment())
     app.UseExceptionHandler("/Error");
     app.UseHsts();
 }
+
+var webRootPath = Path.Combine(builder.Environment.ContentRootPath, "wwwroot");
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider = new PhysicalFileProvider(webRootPath),
+    RequestPath = "/wwwroot"
+});
 
 app.UseHttpsRedirection();
 app.UseStaticFiles();
