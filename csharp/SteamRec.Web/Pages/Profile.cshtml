@@ -84,6 +84,7 @@
             <table class="table table-dark table-striped table-sm mb-0">
                 <thead>
                     <tr>
+                        <th>Thumbnail</th>
                         <th>AppID</th>
                         <th>Name</th>
                         <th>Playtime (hours)</th>
@@ -93,6 +94,12 @@
                     @foreach (var g in Model.MatchedOwnedGames.Take(25))
                     {
                         <tr>
+                            <td>
+                                @if (!string.IsNullOrEmpty(g.ThumbnailUrl))
+                                {
+                                    <img src="@g.ThumbnailUrl" alt="@($"{g.Name} capsule")" class="steam-thumb" loading="lazy" />
+                                }
+                            </td>
                             <td>@g.AppId</td>
                             <td>@g.Name</td>
                             <td>@g.PlaytimeHours.ToString("0.0")</td>
@@ -126,6 +133,12 @@
                     var badge = ReviewBadgeClass(r.ReviewScoreAdj, r.ReviewTotal);
 
                     <tr>
+                        <td>
+                            @if (!string.IsNullOrEmpty(r.ThumbnailUrl))
+                            {
+                                <img src="@r.ThumbnailUrl" alt="@($"{r.Name} capsule")" class="steam-thumb" loading="lazy" />
+                            }
+                        </td>
                         <td>@r.AppId</td>
                         <td>@r.Name</td>
                         <td>@r.Similarity.ToString("0.000")</td>

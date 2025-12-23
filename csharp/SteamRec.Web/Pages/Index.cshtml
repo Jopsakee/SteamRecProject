@@ -71,6 +71,7 @@
             <table class="table table-dark table-striped table-sm mb-0">
                 <thead>
                     <tr>
+                        <th>Thumbnail</th>
                         <th>AppID</th>
                         <th>Name</th>
                         <th>Similarity</th>
@@ -87,6 +88,12 @@
                     var badge = ReviewBadgeClass(r.ReviewScoreAdj, r.ReviewTotal);
 
                     <tr>
+                        <td>
+                            @if (!string.IsNullOrEmpty(r.ThumbnailUrl))
+                            {
+                                <img src="@r.ThumbnailUrl" alt="@($"{r.Name} capsule")" class="steam-thumb" loading="lazy" />
+                            }
+                        </td>
                         <td>@r.AppId</td>
                         <td>@r.Name</td>
                         <td>@r.Similarity.ToString("0.000")</td>
