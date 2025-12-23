@@ -200,4 +200,65 @@
 .meta-badge.game {
     background: rgba(110, 229, 159, 0.22);
     border: 1px solid rgba(110, 229, 159, 0.6);
+.steam-thumb {
+    width: 140px;
+    height: auto;
+    border-radius: 4px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.6);
+}
+
+.steam-game-link {
+    color: #ffffff;
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.steam-game-link:hover,
+.steam-game-link:focus,
+.steam-game-link:visited {
+    color: #c7d5e0;
+    text-decoration: none;
+}
+
+.loading-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.65);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 1050;
+}
+
+.loading-overlay.is-active {
+    display: flex;
+}
+
+.loading-overlay__content {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 1rem 1.5rem;
+    background-color: #1b2838;
+    border-radius: 6px;
+    border: 1px solid #000000;
+    box-shadow: 0 0 12px rgba(0, 0, 0, 0.8);
+    color: #c7d5e0;
+    font-weight: 600;
+}
+
+.loading-overlay__spinner {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: 3px solid rgba(199, 213, 224, 0.4);
+    border-top-color: #66c0f4;
+    animation: steam-spin 1s linear infinite;
+}
+
+@keyframes steam-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
 }

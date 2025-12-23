@@ -4,6 +4,7 @@ using System.Linq;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using SteamRec.Core;
+using SteamRec.Web.Services;
 
 namespace SteamRec.Web.Pages;
 
@@ -66,7 +67,9 @@ public class IndexModel : PageModel
                 PriceEur = r.game.PriceEur,
                 MetacriticScore = r.game.MetacriticScore,
                 ReleaseYear = r.game.ReleaseYear,
-                RequiredAge = r.game.RequiredAge
+                RequiredAge = r.game.RequiredAge,
+                ThumbnailUrl = SteamImageHelper.BuildCapsuleUrl(r.game.AppId),
+                StoreUrl = SteamImageHelper.BuildStorePageUrl(r.game.AppId)
             })
             .ToList();
     }
@@ -83,5 +86,7 @@ public class IndexModel : PageModel
         public double MetacriticScore { get; set; }
         public int ReleaseYear { get; set; }
         public int RequiredAge { get; set; }
+        public string ThumbnailUrl { get; set; } = "";
+        public string StoreUrl { get; set; } = "";
     }
 }

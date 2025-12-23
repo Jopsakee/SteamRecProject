@@ -72,6 +72,7 @@
             <table class="table table-dark table-striped table-sm mb-0">
                 <thead>
                     <tr>
+                        <th></th>
                         <th>AppID</th>
                         <th>Name</th>
                         <th>Similarity</th>
@@ -86,6 +87,9 @@
                     var pct = Math.Clamp(r.ReviewScoreAdj, 0.0, 1.0) * 100.0;
                     var label = ReviewLabel(r.ReviewScoreAdj, r.ReviewTotal);
                     var badge = ReviewBadgeClass(r.ReviewScoreAdj, r.ReviewTotal);
+                    var storeUrl = !string.IsNullOrEmpty(r.StoreUrl)
+                        ? r.StoreUrl
+                        : $"https://store.steampowered.com/app/{r.AppId}/";
 
                     <tr class="recommendation-row"
                         data-recommendation-row="true"
@@ -96,8 +100,32 @@
                         data-year="@r.ReleaseYear"
                         data-age="@r.RequiredAge"
                         data-review="@r.ReviewScoreAdj.ToString(CultureInfo.InvariantCulture)">
+                        <td>
+                            @if (!string.IsNullOrEmpty(r.ThumbnailUrl))
+                            {
+                                if (!string.IsNullOrEmpty(storeUrl))
+                                {
+                                    <a href="@storeUrl" target="_blank" rel="noreferrer noopener" class="steam-game-link">
+                                        <img src="@r.ThumbnailUrl" alt="@($"{r.Name} capsule")" class="steam-thumb" loading="lazy" />
+                                    </a>
+                                }
+                                else
+                                {
+                                    <img src="@r.ThumbnailUrl" alt="@($"{r.Name} capsule")" class="steam-thumb" loading="lazy" />
+                                }
+                            }
+                        </td>
                         <td>@r.AppId</td>
-                        <td>@r.Name</td>
+                        <td>
+                            @if (!string.IsNullOrEmpty(storeUrl))
+                            {
+                                <a href="@storeUrl" target="_blank" rel="noreferrer noopener" class="steam-game-link">@r.Name</a>
+                            }
+                            else
+                            {
+                                @r.Name
+                            }
+                        </td>
                         <td>@r.Similarity.ToString("0.000")</td>
                         <td>@r.OverallScore.ToString("0.000")</td>
                         <td>@r.ReviewTotal</td>
