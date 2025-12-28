@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.Extensions.Caching.Memory;
 using SteamRec.Core;
 using SteamRec.ML;
 using SteamRec.Web.Services;
@@ -15,22 +16,27 @@ namespace SteamRec.Web.Pages;
 public class ProfileModel : PageModel
 {
     private const int RecommendationsPerPage = 10;
+    private const int RecommendationsCacheSize = 100;
+    private static readonly TimeSpan CacheDuration = TimeSpan.FromMinutes(10);
     private readonly IRecommenderProvider _recommenderProvider;
     private readonly SteamProfileService _profileService;
     private readonly CollaborativeFilteringRecommender _cf;
     private readonly InteractionRepository _interactionRepo;
+    private readonly IMemoryCache _cache;
     private IReadOnlyList<GameRecord> _games = Array.Empty<GameRecord>();
 
     public ProfileModel(
         IRecommenderProvider recommenderProvider,
         SteamProfileService profileService,
         CollaborativeFilteringRecommender cf,
-        InteractionRepository interactionRepo)
+        InteractionRepository interactionRepo,
+        IMemoryCache cache)
     {
         _recommenderProvider = recommenderProvider;
         _profileService = profileService;
         _cf = cf;
         _interactionRepo = interactionRepo;
+        _cache = cache;
     }
 
     [BindProperty] public string? SteamId { get; set; }
@@ -65,6 +71,16 @@ public class ProfileModel : PageModel
 
     public async Task<IActionResult> OnPostPageAsync(int pageNumber)
     {
+        if (string.IsNullOrWhiteSpace(SteamId))
+            return Page();
+
+        await LoadGamesAsync();
+
+        if (TryRestoreFromCache(pageNumber))
+        {
+            return Page();
+        }
+
         return await HandleRequestAsync(pageNumber);
     }
 
@@ -238,12 +254,14 @@ public class ProfileModel : PageModel
             return Page();
 
         BuildRadarProfile(likedAppIds);
-        LoadRecommendations(recommender, likedAppIds, matched, steamId, pageNumber);
+        var allRecommendations = LoadRecommendations(recommender, likedAppIds, matched, steamId, pageNumber);
+        StoreInCache(steamId, allRecommendations);
+        ApplyRecommendationPage(allRecommendations, pageNumber);
 
         return Page();
     }
 
-    private void LoadRecommendations(
+    private List<RecommendationViewModel> LoadRecommendations(
         ContentBasedRecommender recommender,
         List<int> likedAppIds,
         List<OwnedGameViewModel> matched,
@@ -252,6 +270,7 @@ public class ProfileModel : PageModel
     {
         var safePage = Math.Max(1, pageNumber);
         var neededCount = safePage * RecommendationsPerPage + 1;
+        var requestCount = Math.Max(neededCount, RecommendationsCacheSize);
 
         List<RecommendationViewModel> allRecommendations;
 
@@ -264,7 +283,7 @@ public class ProfileModel : PageModel
                 userId: steamId,
                 candidateAppIds: candidateAppIds,
                 excludeAppIds: ownedSet,
-                topN: neededCount);
+                topN: requestCount);
 
             var byId = _games.ToDictionary(g => (uint)g.AppId, g => g);
 
@@ -294,7 +313,7 @@ public class ProfileModel : PageModel
         }
         else
         {
-            var recs = recommender.RecommendForLiked(likedAppIds, topN: neededCount);
+            var recs = recommender.RecommendForLiked(likedAppIds, topN: requestCount);
             allRecommendations = recs
                 .Select(r => new RecommendationViewModel
                 {
@@ -313,6 +332,12 @@ public class ProfileModel : PageModel
                 })
                 .ToList();
         }
+        return allRecommendations;
+    }
+
+    private void ApplyRecommendationPage(List<RecommendationViewModel> allRecommendations, int pageNumber)
+    {
+        var safePage = Math.Max(1, pageNumber);
         HasNextPage = allRecommendations.Count > safePage * RecommendationsPerPage;
         HasPreviousPage = safePage > 1;
         CurrentPage = safePage;
@@ -320,5 +345,59 @@ public class ProfileModel : PageModel
             .Skip((safePage - 1) * RecommendationsPerPage)
             .Take(RecommendationsPerPage)
             .ToList();
+    }
+
+    private bool TryRestoreFromCache(int pageNumber)
+    {
+        var steamId = SteamId?.Trim();
+        if (string.IsNullOrWhiteSpace(steamId))
+        {
+            return false;
+        }
+
+        var cacheKey = BuildCacheKey(steamId);
+        if (!_cache.TryGetValue(cacheKey, out ProfileRecommendationCache? cached) || cached is null)
+        {
+            return false;
+        }
+
+        var requiredCount = Math.Max(1, pageNumber) * RecommendationsPerPage + 1;
+        if (cached.Recommendations.Count < requiredCount)
+        {
+            return false;
+        }
+
+        MatchedOwnedGames = cached.MatchedOwnedGames;
+        RadarLabels = cached.RadarLabels;
+        UserRadarValues = cached.UserRadarValues;
+        ApplyRecommendationPage(cached.Recommendations, pageNumber);
+        return true;
+    }
+
+    private void StoreInCache(string steamId, List<RecommendationViewModel> recommendations)
+    {
+        var cacheKey = BuildCacheKey(steamId);
+        var cached = new ProfileRecommendationCache
+        {
+            MatchedOwnedGames = MatchedOwnedGames,
+            Recommendations = recommendations,
+            RadarLabels = RadarLabels,
+            UserRadarValues = UserRadarValues
+        };
+
+        _cache.Set(cacheKey, cached, CacheDuration);
+    }
+
+    private string BuildCacheKey(string steamId)
+    {
+        return $"profile-recs:{steamId}:{Algorithm}:{ContributeToCollaborative}";
+    }
+
+    private class ProfileRecommendationCache
+    {
+        public List<OwnedGameViewModel> MatchedOwnedGames { get; init; } = new();
+        public List<RecommendationViewModel> Recommendations { get; init; } = new();
+        public List<string> RadarLabels { get; init; } = new();
+        public List<double> UserRadarValues { get; init; } = new();
     }
 }
