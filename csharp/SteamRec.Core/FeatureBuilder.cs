@@ -91,7 +91,7 @@ public class FeatureBuilder
         foreach (var g in games)
         {
             // numeric z-scores with internal weights
-            var numeric = new double[_numericNames.Length];
+            var numeric = new float[_numericNames.Length];
             for (int i = 0; i < _numericNames.Length; i++)
             {
                 var name = _numericNames[i];
@@ -117,34 +117,34 @@ public class FeatureBuilder
                 if (name == "review_volume_log")
                     z *= REVIEW_VOL_INTERNAL_WEIGHT;
 
-                numeric[i] = z;
+                numeric[i] = (float)z;
             }
 
             // genres one-hot
-            var genreVec = new double[GenreVocab.Count];
+            var genreVec = new float[GenreVocab.Count];
             for (int i = 0; i < GenreVocab.Count; i++)
             {
                 if (g.Genres.Contains(GenreVocab[i]))
-                    genreVec[i] = GENRE_BLOCK_WEIGHT;
+                    genreVec[i] = (float)GENRE_BLOCK_WEIGHT;
             }
 
             // tags one-hot
-            var tagVec = new double[TagVocab.Count];
+            var tagVec = new float[TagVocab.Count];
             for (int i = 0; i < TagVocab.Count; i++)
             {
                 if (g.Tags.Contains(TagVocab[i]))
-                    tagVec[i] = TAG_BLOCK_WEIGHT;
+                    tagVec[i] = (float)TAG_BLOCK_WEIGHT;
             }
 
             // categories one-hot
-            var catVec = new double[CategoryVocab.Count];
+            var catVec = new float[CategoryVocab.Count];
             for (int i = 0; i < CategoryVocab.Count; i++)
             {
                 if (g.Categories.Contains(CategoryVocab[i]))
-                    catVec[i] = CAT_BLOCK_WEIGHT;
+                    catVec[i] = (float)CAT_BLOCK_WEIGHT;
             }
 
-            var features = new double[numeric.Length + genreVec.Length + tagVec.Length + catVec.Length];
+            var features = new float[numeric.Length + genreVec.Length + tagVec.Length + catVec.Length];
             Array.Copy(numeric, 0, features, 0, numeric.Length);
             Array.Copy(genreVec, 0, features, numeric.Length, genreVec.Length);
             Array.Copy(tagVec, 0, features, numeric.Length + genreVec.Length, tagVec.Length);

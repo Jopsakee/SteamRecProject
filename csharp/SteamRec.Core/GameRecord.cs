@@ -28,5 +28,5 @@ public class GameRecord
 
     public double ReviewVolumeLog => Math.Log10(ReviewTotal + 1);
 
-    public double[] Features { get; set; } = Array.Empty<double>();
+    public float[] Features { get; set; } = Array.Empty<float>();
 }

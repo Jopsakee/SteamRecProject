@@ -103,7 +103,7 @@ public class ContentBasedRecommender
 
         // Average feature vector for liked games
         int dim = likedGames[0].Features.Length;
-        var userVec = new double[dim];
+        var userVec = new float[dim];
         foreach (var g in likedGames)
         {
             for (int i = 0; i < dim; i++)
@@ -159,14 +159,16 @@ public class ContentBasedRecommender
              + W_VOL * normVol;
     }
 
-    private static double CosineSimilarity(double[] a, double[] b)
+    private static double CosineSimilarity(float[] a, float[] b)
     {
         double dot = 0.0, normA = 0.0, normB = 0.0;
         for (int i = 0; i < a.Length; i++)
         {
-            dot += a[i] * b[i];
-            normA += a[i] * a[i];
-            normB += b[i] * b[i];
+            var av = a[i];
+            var bv = b[i];
+            dot += av * bv;
+            normA += av * av;
+            normB += bv * bv;
         }
 
         if (normA == 0 || normB == 0) return 0.0;
