@@ -11,6 +11,7 @@ namespace SteamRec.Web.Pages;
 
 public class IndexModel : PageModel
 {
+    private const int RecommendationsPerPage = 10;
     private readonly IRecommenderProvider _recommenderProvider;
     private IReadOnlyList<GameRecord> _games = Array.Empty<GameRecord>();
 
@@ -26,23 +27,65 @@ public class IndexModel : PageModel
     public int SelectedAppId { get; set; }
 
     public int TotalGames { get; private set; }
+    public int CurrentPage { get; private set; } = 1;
+    public bool HasNextPage { get; private set; }
+    public bool HasPreviousPage { get; private set; }
 
     public List<GameRecord> SearchResults { get; private set; } = new();
     public List<RecommendationViewModel> Recommendations { get; private set; } = new();
 
     public async Task OnGetAsync()
     {
+        await LoadGamesAsync();
+    }
+
+    public async Task<IActionResult> OnPostSearchAsync()
+    {
+        await LoadGamesAsync();
+        BuildSearchResults();
+
+        return Page();
+    }
+
+    public async Task<IActionResult> OnPostRecommendAsync()
+    {
+        await LoadGamesAsync();
+        BuildSearchResults();
+
+        if (SelectedAppId <= 0)
+        {
+            return Page();
+        }
+
+        await LoadRecommendationsAsync(1);
+
+        return Page();
+    }
+
+    public async Task<IActionResult> OnPostRecommendPageAsync(int pageNumber)
+    {
+        await LoadGamesAsync();
+        BuildSearchResults();
+
+        if (SelectedAppId <= 0)
+        {
+            return Page();
+        }
+
+        await LoadRecommendationsAsync(pageNumber);
+
+        return Page();
+    }
+
+    private async Task LoadGamesAsync()
+    {
         var recommender = await _recommenderProvider.GetContentBasedAsync();
         _games = recommender.Games;
         TotalGames = recommender.GameCount;
     }
 
-    public async Task<IActionResult> OnPostSearchAsync()
+     private void BuildSearchResults()
     {
-        var recommender = await _recommenderProvider.GetContentBasedAsync();
-        _games = recommender.Games;
-        TotalGames = recommender.GameCount;
-
         if (!string.IsNullOrWhiteSpace(SearchTerm))
         {
             SearchResults = _games
@@ -51,23 +94,22 @@ public class IndexModel : PageModel
                 .Take(25)
                 .ToList();
         }
-
-        return Page();
     }
-
-    public async Task<IActionResult> OnPostRecommendAsync()
+    private async Task LoadRecommendationsAsync(int pageNumber)
     {
-        // rebuild search results so dropdown stays populated
-        await OnPostSearchAsync();
-
-        if (SelectedAppId <= 0) return Page();
+        var safePage = Math.Max(1, pageNumber);
 
         var recommender = await _recommenderProvider.GetContentBasedAsync();
-        _games = recommender.Games;
-        TotalGames = recommender.GameCount;
-        var recs = recommender.RecommendSimilar(SelectedAppId, topN: 10);
+        var neededCount = safePage * RecommendationsPerPage + 1;
+        var recs = recommender.RecommendSimilar(SelectedAppId, topN: neededCount).ToList();
+
+        HasNextPage = recs.Count > safePage * RecommendationsPerPage;
+        HasPreviousPage = safePage > 1;
+        CurrentPage = safePage;
 
         Recommendations = recs
+            .Skip((safePage - 1) * RecommendationsPerPage)
+            .Take(RecommendationsPerPage)
             .Select(r => new RecommendationViewModel
             {
                 AppId = r.game.AppId,
@@ -84,8 +126,6 @@ public class IndexModel : PageModel
                 StoreUrl = SteamImageHelper.BuildStorePageUrl(r.game.AppId)
             })
             .ToList();
-
-        return Page();
     }
 
     public class RecommendationViewModel
