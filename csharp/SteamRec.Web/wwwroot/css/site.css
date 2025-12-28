@@ -74,7 +74,7 @@
 }
 
 .review-table .review-name {
-    width: 50%;
+    width: 45%;
     overflow-wrap: anywhere;
 }
 
@@ -83,17 +83,18 @@
 }
 
 .review-table .review-score {
-    width: 35%;
+    width: 100%;
     white-space: normal;
     display: flex;
     flex-direction: column;
+    align-items: flex-start;
     gap: 4px;
 }
 
 .review-table .review-score .badge {
     align-self: flex-start;
     max-width: 100%;
-    white-space: normal;
+    white-space: nowrap;
 }
 
 .review-table .review-percent {
