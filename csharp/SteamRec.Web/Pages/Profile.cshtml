@@ -141,7 +141,7 @@
 
     @if (Model.Recommendations.Any())
     {
-        <h2 class="steam-section-title">Recommended for You</h2>
+        <h2 class="steam-section-title" id="recommendations">Recommended for You</h2>
         <div class="steam-card p-3">
             <table class="table table-dark table-striped table-sm mb-0"
                    data-radar-labels="@Model.SerializeRadarLabels()"
@@ -216,7 +216,7 @@
         <div class="d-flex flex-wrap justify-content-between align-items-center mt-3 gap-2">
             <span class="text-muted">Page @Model.CurrentPage</span>
             <div class="d-flex gap-2">
-                <form method="post" asp-page-handler="Page" class="m-0">
+                <form method="post" asp-page-handler="Page" asp-fragment="recommendations" class="m-0">
                     <input type="hidden" asp-for="SteamId" />
                     <input type="hidden" asp-for="Algorithm" />
                     <input type="hidden" asp-for="ContributeToCollaborative" />
@@ -225,7 +225,7 @@
                         Previous
                     </button>
                 </form>
-                <form method="post" asp-page-handler="Page" class="m-0">
+                <form method="post" asp-page-handler="Page" asp-fragment="recommendations" class="m-0">
                     <input type="hidden" asp-for="SteamId" />
                     <input type="hidden" asp-for="Algorithm" />
                     <input type="hidden" asp-for="ContributeToCollaborative" />

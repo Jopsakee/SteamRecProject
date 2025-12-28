@@ -66,7 +66,7 @@
 
     @if (Model.Recommendations.Any())
     {
-        <h2 class="steam-section-title">Recommendations</h2>
+        <h2 class="steam-section-title" id="recommendations">Recommendations</h2>
 
         <div class="steam-card p-3">
             <table class="table table-dark table-striped table-sm mb-0">
@@ -144,7 +144,7 @@
         <div class="d-flex flex-wrap justify-content-between align-items-center mt-3 gap-2">
             <span class="text-muted">Page @Model.CurrentPage</span>
             <div class="d-flex gap-2">
-                <form method="post" asp-page-handler="RecommendPage" class="m-0">
+                <form method="post" asp-page-handler="RecommendPage" asp-fragment="recommendations" class="m-0">
                     <input type="hidden" asp-for="SearchTerm" />
                     <input type="hidden" asp-for="SelectedAppId" />
                     <input type="hidden" name="pageNumber" value="@(Model.CurrentPage - 1)" />
@@ -152,7 +152,7 @@
                         Previous
                     </button>
                 </form>
-                <form method="post" asp-page-handler="RecommendPage" class="m-0">
+                <form method="post" asp-page-handler="RecommendPage" asp-fragment="recommendations" class="m-0">
                     <input type="hidden" asp-for="SearchTerm" />
                     <input type="hidden" asp-for="SelectedAppId" />
                     <input type="hidden" name="pageNumber" value="@(Model.CurrentPage + 1)" />
