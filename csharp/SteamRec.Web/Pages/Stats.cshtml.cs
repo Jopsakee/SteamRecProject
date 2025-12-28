@@ -1,18 +1,20 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using SteamRec.Core;
+using SteamRec.Web.Services;
 
 namespace SteamRec.Web.Pages;
 
 public class StatsModel : PageModel
 {
-    private readonly ContentBasedRecommender _recommender;
+    private readonly IRecommenderProvider _recommenderProvider;
 
-    public StatsModel(ContentBasedRecommender recommender)
+    public StatsModel(IRecommenderProvider recommenderProvider)
     {
-        _recommender = recommender;
+        _recommenderProvider = recommenderProvider;
     }
 
     public int TotalGames { get; private set; }
@@ -24,9 +26,10 @@ public class StatsModel : PageModel
     public List<ChartPoint> ReleaseYears { get; private set; } = new();
     public List<ChartPoint> PriceBuckets { get; private set; } = new();
 
-    public void OnGet()
+    public async Task OnGetAsync()
     {
-        var games = _recommender.Games;
+        var recommender = await _recommenderProvider.GetContentBasedAsync();
+        var games = recommender.Games;
         TotalGames = games.Count;
         FreeGames = games.Count(g => g.IsFree || g.PriceEur <= 0);
 

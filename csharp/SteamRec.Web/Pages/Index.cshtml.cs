@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using SteamRec.Core;
@@ -10,13 +11,12 @@ namespace SteamRec.Web.Pages;
 
 public class IndexModel : PageModel
 {
-    private readonly ContentBasedRecommender _recommender;
-    private readonly IReadOnlyList<GameRecord> _games;
+    private readonly IRecommenderProvider _recommenderProvider;
+    private IReadOnlyList<GameRecord> _games = Array.Empty<GameRecord>();
 
-    public IndexModel(ContentBasedRecommender recommender)
+    public IndexModel(IRecommenderProvider recommenderProvider)
     {
-        _recommender = recommender;
-        _games = recommender.Games;
+        _recommenderProvider = recommenderProvider;
     }
 
     [BindProperty]
@@ -25,17 +25,24 @@ public class IndexModel : PageModel
     [BindProperty]
     public int SelectedAppId { get; set; }
 
-    public int TotalGames => _recommender.GameCount;
+    public int TotalGames { get; private set; }
 
     public List<GameRecord> SearchResults { get; private set; } = new();
     public List<RecommendationViewModel> Recommendations { get; private set; } = new();
 
-    public void OnGet()
+    public async Task OnGetAsync()
     {
+        var recommender = await _recommenderProvider.GetContentBasedAsync();
+        _games = recommender.Games;
+        TotalGames = recommender.GameCount;
     }
 
-    public void OnPostSearch()
+    public async Task<IActionResult> OnPostSearchAsync()
     {
+        var recommender = await _recommenderProvider.GetContentBasedAsync();
+        _games = recommender.Games;
+        TotalGames = recommender.GameCount;
+
         if (!string.IsNullOrWhiteSpace(SearchTerm))
         {
             SearchResults = _games
@@ -44,16 +51,21 @@ public class IndexModel : PageModel
                 .Take(25)
                 .ToList();
         }
+
+        return Page();
     }
 
-    public void OnPostRecommend()
+    public async Task<IActionResult> OnPostRecommendAsync()
     {
         // rebuild search results so dropdown stays populated
-        OnPostSearch();
+        await OnPostSearchAsync();
 
-        if (SelectedAppId <= 0) return;
+        if (SelectedAppId <= 0) return Page();
 
-        var recs = _recommender.RecommendSimilar(SelectedAppId, topN: 10);
+        var recommender = await _recommenderProvider.GetContentBasedAsync();
+        _games = recommender.Games;
+        TotalGames = recommender.GameCount;
+        var recs = recommender.RecommendSimilar(SelectedAppId, topN: 10);
 
         Recommendations = recs
             .Select(r => new RecommendationViewModel
@@ -72,6 +84,8 @@ public class IndexModel : PageModel
                 StoreUrl = SteamImageHelper.BuildStorePageUrl(r.game.AppId)
             })
             .ToList();
+
+        return Page();
     }
 
     public class RecommendationViewModel

@@ -14,23 +14,22 @@ namespace SteamRec.Web.Pages;
 
 public class ProfileModel : PageModel
 {
-    private readonly ContentBasedRecommender _recommender;
+    private readonly IRecommenderProvider _recommenderProvider;
     private readonly SteamProfileService _profileService;
     private readonly CollaborativeFilteringRecommender _cf;
     private readonly InteractionRepository _interactionRepo;
-    private readonly IReadOnlyList<GameRecord> _games;
+    private IReadOnlyList<GameRecord> _games = Array.Empty<GameRecord>();
 
     public ProfileModel(
-        ContentBasedRecommender recommender,
+        IRecommenderProvider recommenderProvider,
         SteamProfileService profileService,
         CollaborativeFilteringRecommender cf,
         InteractionRepository interactionRepo)
     {
-        _recommender = recommender;
+        _recommenderProvider = recommenderProvider;
         _profileService = profileService;
         _cf = cf;
         _interactionRepo = interactionRepo;
-        _games = recommender.Games;
     }
 
     [BindProperty] public string? SteamId { get; set; }
@@ -42,7 +41,7 @@ public class ProfileModel : PageModel
     [BindProperty] public bool ContributeToCollaborative { get; set; } = true;
 
     public bool CollaborativeAvailable => _cf.IsReady;
-    public int TotalGames => _recommender.GameCount;
+    public int TotalGames { get; private set; }
     public bool ShowPrivacyGuide { get; private set; }
 
     public List<OwnedGameViewModel> MatchedOwnedGames { get; private set; } = new();
@@ -50,12 +49,21 @@ public class ProfileModel : PageModel
     public List<string> RadarLabels { get; private set; } = new();
     public List<double> UserRadarValues { get; private set; } = new();
 
-    public void OnGet() { }
+    public async Task OnGetAsync()
+    {
+        var recommender = await _recommenderProvider.GetContentBasedAsync();
+        _games = recommender.Games;
+        TotalGames = recommender.GameCount;
+    }
 
     public async Task<IActionResult> OnPostAsync()
     {
         if (string.IsNullOrWhiteSpace(SteamId))
             return Page();
+
+        var recommender = await _recommenderProvider.GetContentBasedAsync();
+        _games = recommender.Games;
+        TotalGames = recommender.GameCount;
 
         var steamId = SteamId.Trim();
 
@@ -176,7 +184,7 @@ public class ProfileModel : PageModel
         }
         else
         {
-            var recs = _recommender.RecommendForLiked(likedAppIds, topN: 20);
+            var recs = recommender.RecommendForLiked(likedAppIds, topN: 20);
             Recommendations = recs
                 .Select(r => new RecommendationViewModel
                 {
