@@ -6,6 +6,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddRazorPages();
 builder.Services.AddHttpClient<SteamProfileService>();
+builder.Services.AddMemoryCache();
 
 builder.Services.AddSingleton<MongoDb>();
 builder.Services.AddSingleton<GameRepository>();
