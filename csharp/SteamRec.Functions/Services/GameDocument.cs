@@ -31,5 +31,7 @@ public class GameDocument
     // log10(review_total) (keeps scale stable)
     public double ReviewVolumeLog { get; set; }
 
+    public int? FullGameAppId { get; set; }
+
     public DateTime UpdatedUtc { get; set; } = DateTime.UtcNow;
 }

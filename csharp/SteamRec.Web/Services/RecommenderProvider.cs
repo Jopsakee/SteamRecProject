@@ -45,7 +45,8 @@ public sealed class RecommenderProvider : IRecommenderProvider
                 IsFree = doc.IsFree,
                 ReviewTotal = doc.ReviewTotal,
                 ReviewRatio = doc.ReviewRatio,
-                ReviewScoreAdj = doc.ReviewScoreAdj
+                ReviewScoreAdj = doc.ReviewScoreAdj,
+                FullGameAppId = doc.FullGameAppId
             };
 
             game.Genres = SplitSemicolon(game.GenresRaw);

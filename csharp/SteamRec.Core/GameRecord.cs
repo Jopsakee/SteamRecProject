@@ -28,5 +28,7 @@ public class GameRecord
 
     public double ReviewVolumeLog => Math.Log10(ReviewTotal + 1);
 
+    public int? FullGameAppId { get; set; }
+
     public float[] Features { get; set; } = Array.Empty<float>();
 }

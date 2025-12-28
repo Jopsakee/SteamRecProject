@@ -26,4 +26,6 @@ public class GameDocument
     public double ReviewRatio { get; set; }
     public double ReviewScoreAdj { get; set; }
     public double ReviewVolumeLog { get; set; }
+    
+    public int? FullGameAppId { get; set; }
 }
