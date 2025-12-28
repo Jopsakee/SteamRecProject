@@ -1,5 +1,6 @@
 # Negeer environment variabelen (zeer belangrijk!)
 .env
+local.settings.json
 
 # Negeer Python cache (handig voor je scripts)
 __pycache__/
@@ -22,4 +23,3 @@ AzuriteConfig
 __blobstorage__/
 __queuestorage__/
 __blobstorage__/853467e1-b000-40a0-9cb7-46bf883681ef
-csharp/SteamRec.Functions/local.settings.json
