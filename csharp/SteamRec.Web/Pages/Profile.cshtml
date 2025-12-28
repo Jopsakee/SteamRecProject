@@ -40,14 +40,14 @@
 
 <div class="steam-container mt-4">
     <h1 class="steam-title mb-3">Steam Profile Recommender</h1>
-    <p class="steam-subtitle">Enter your SteamID64 to get recommendations based on your library.</p>
+    <p class="steam-subtitle">Enter your SteamID64 or Steam profile URL to get recommendations based on your library.</p>
     <p class="text-muted">Loaded games: @Model.TotalGames</p>
 
     <form method="post" class="mb-4 steam-card p-3">
         <div asp-validation-summary="ModelOnly" class="alert alert-warning"></div>
         <div class="mb-3">
-            <label asp-for="SteamId" class="form-label">SteamID64</label>
-            <input asp-for="SteamId" class="form-control" placeholder="e.g. 7656119XXXXXXXXXX" />
+            <label asp-for="SteamId" class="form-label">SteamID64 or profile URL</label>
+            <input asp-for="SteamId" class="form-control" placeholder="e.g. 7656119XXXXXXXXXX or https://steamcommunity.com/id/customname" />
             <span asp-validation-for="SteamId" class="text-warning"></span>
         </div>
 
@@ -73,7 +73,7 @@
     @if (Model.ShowPrivacyGuide){
     <div class="steam-card p-3 mb-4 border border-warning">
         <h5 class="mb-2">Is your profile private?</h5>
-        <p class="mb-2">Steam requires your profile and game details to be public so we can load your library. If your SteamID64 returns a private profile warning, update your privacy settings:</p>
+        <p class="mb-2">Steam requires your profile and game details to be public so we can load your library. If your SteamID64 or profile URL returns a private profile warning, update your privacy settings:</p>
         <ol class="mb-0">
             <li>Open Steam &gt; click your username &gt; <strong>View my profile</strong>.</li>
             <li>Click <strong>Edit Profile</strong> and select <strong>Privacy Settings</strong> in the sidebar. Or click <a href=https://steamcommunity.com/id/Jopsakee/edit/settings>here</a></li>

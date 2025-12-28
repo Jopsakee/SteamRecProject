@@ -176,8 +176,19 @@ public class ProfileModel : PageModel
 
         var recommender = await LoadGamesAsync();
 
-        var steamId = SteamId.Trim();
-
+        var steamInput = SteamId.Trim();
+        string steamId;
+        try
+        {
+            steamId = await _profileService.ResolveSteamIdAsync(steamInput);
+            SteamId = steamId;
+        }
+        catch (InvalidSteamIdException iex)
+        {
+            ModelState.AddModelError(nameof(SteamId), iex.Message);
+            return Page();
+        }
+        
         // 1) Fetch owned games from Steam
         List<SteamProfileService.OwnedGame> owned;
         try
