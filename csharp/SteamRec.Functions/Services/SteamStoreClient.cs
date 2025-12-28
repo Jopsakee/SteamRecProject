@@ -28,6 +28,7 @@ public class SteamStoreClient
         var (okHttp, body, status, contentType) = await GetStringWithRetryAsync(url, ct);
         if (!okHttp || body is null) return (false, null, null, null, null, null, null, null, null);
 
+
         if (!LooksLikeJson(contentType, body))
         {
             _log.LogWarning("[SteamStoreClient] appdetails got non-JSON response appid={appid} status={status} contentType={ct}. BodySnippet={snippet}",
