@@ -23,6 +23,8 @@ public class StatsModel : PageModel
     public double AverageMetacritic { get; private set; }
     public List<ChartPoint> TopTags { get; private set; } = new();
     public List<ChartPoint> TopPlayedGames { get; private set; } = new();
+    public List<ReviewEntry> TopBestReviewedGames { get; private set; } = new();
+    public List<ReviewEntry> TopWorstReviewedGames { get; private set; } = new();
     public List<ChartPoint> ReleaseYears { get; private set; } = new();
     public List<ChartPoint> PriceBuckets { get; private set; } = new();
 
@@ -41,6 +43,8 @@ public class StatsModel : PageModel
 
         TopTags = BuildTopCounts(games, g => g.Tags, 10);
         TopPlayedGames = BuildTopPlayedGames(games, 10);
+        TopBestReviewedGames = BuildTopReviewedGames(games, 5, true);
+        TopWorstReviewedGames = BuildTopReviewedGames(games, 5, false);
         ReleaseYears = BuildReleaseYearCounts(games, 2025);
         PriceBuckets = BuildPriceBuckets(games);
     }
@@ -71,6 +75,24 @@ public class StatsModel : PageModel
             .ToList();
     }
 
+    private static List<ReviewEntry> BuildTopReviewedGames(
+        IEnumerable<GameRecord> games,
+        int take,
+        bool best)
+    {
+        var reviewedGames = games.Where(g => g.ReviewTotal > 100);
+
+        var ordered = best
+            ? reviewedGames.OrderByDescending(g => g.ReviewScoreAdj)
+            : reviewedGames.OrderBy(g => g.ReviewScoreAdj);
+
+        return ordered
+            .ThenByDescending(g => g.ReviewTotal)
+            .ThenBy(g => g.Name, StringComparer.OrdinalIgnoreCase)
+            .Take(take)
+            .Select(g => new ReviewEntry(g.Name, g.ReviewScoreAdj, g.ReviewTotal))
+            .ToList();
+    }
 
     private static List<ChartPoint> BuildReleaseYearCounts(
         IEnumerable<GameRecord> games,
@@ -134,4 +156,6 @@ public class StatsModel : PageModel
     }
 
     public record ChartPoint(string Label, int Count);
+
+    public record ReviewEntry(string Name, double ReviewScoreAdj, int ReviewTotal);
 }
