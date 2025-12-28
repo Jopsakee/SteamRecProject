@@ -20,20 +20,20 @@ public class SteamStoreClient
             _http.DefaultRequestHeaders.UserAgent.ParseAdd("SteamRecProject/1.0 (+AzureFunctions)");
     }
 
-    public async Task<(bool ok, string? appType, int? releaseYear, double? priceEur, bool? isFree, int? requiredAge, double? metacritic, string? genres, string? categories, int? fullGameAppId)>
+    public async Task<(bool ok, string? appType, int? releaseYear, double? priceEur, bool? isFree, int? requiredAge, double? metacritic, string? genres, string? categories)>
         GetAppDetailsAsync(int appId, string cc = "be", string lang = "en", CancellationToken ct = default)
     {
         var url = $"https://store.steampowered.com/api/appdetails?appids={appId}&cc={cc}&l={lang}";
 
         var (okHttp, body, status, contentType) = await GetStringWithRetryAsync(url, ct);
-        if (!okHttp || body is null) return (false, null, null, null, null, null, null, null, null, null);
+        if (!okHttp || body is null) return (false, null, null, null, null, null, null, null, null);
 
 
         if (!LooksLikeJson(contentType, body))
         {
             _log.LogWarning("[SteamStoreClient] appdetails got non-JSON response appid={appid} status={status} contentType={ct}. BodySnippet={snippet}",
                 appId, (int)status, contentType ?? "(none)", Snip(body));
-            return (false, null, null, null, null, null, null, null, null, null);
+            return (false, null, null, null, null, null, null, null, null);
         }
 
         JsonDocument doc;
@@ -42,14 +42,14 @@ public class SteamStoreClient
         {
             _log.LogWarning(ex, "[SteamStoreClient] appdetails JSON parse failed appid={appid} status={status} ct={ct}. BodySnippet={snippet}",
                 appId, (int)status, contentType ?? "(none)", Snip(body));
-            return (false, null, null, null, null, null, null, null, null, null);
+            return (false, null, null, null, null, null, null, null, null);
         }
 
         using (doc)
         {
-            if (!doc.RootElement.TryGetProperty(appId.ToString(), out var root)) return (false, null, null, null, null, null, null, null, null, null);
-            if (!root.TryGetProperty("success", out var successEl) || successEl.ValueKind != JsonValueKind.True) return (false, null, null, null, null, null, null, null, null, null);
-            if (!root.TryGetProperty("data", out var data) || data.ValueKind != JsonValueKind.Object) return (false, null, null, null, null, null, null, null, null, null);
+            if (!doc.RootElement.TryGetProperty(appId.ToString(), out var root)) return (false, null, null, null, null, null, null, null, null);
+            if (!root.TryGetProperty("success", out var successEl) || successEl.ValueKind != JsonValueKind.True) return (false, null, null, null, null, null, null, null, null);
+            if (!root.TryGetProperty("data", out var data) || data.ValueKind != JsonValueKind.Object) return (false, null, null, null, null, null, null, null, null);
 
             // type (game/dlc/demo/mod/etc.)
             string? appType = null;
@@ -125,18 +125,7 @@ public class SteamStoreClient
                 if (names.Length > 0) categories = string.Join(';', names!);
             }
 
-            int? fullGameAppId = null;
-            if (data.TryGetProperty("fullgame", out var fullGameObj) && fullGameObj.ValueKind == JsonValueKind.Object)
-            {
-                if (fullGameObj.TryGetProperty("appid", out var fullGameIdEl) &&
-                    fullGameIdEl.ValueKind == JsonValueKind.Number &&
-                    fullGameIdEl.TryGetInt32(out var fullGameId))
-                {
-                    fullGameAppId = fullGameId;
-                }
-            }
-
-            return (true, appType, releaseYear, priceEur, isFree, requiredAge, metacritic, genres, categories, fullGameAppId);
+            return (true, appType, releaseYear, priceEur, isFree, requiredAge, metacritic, genres, categories);
         }
     }
 

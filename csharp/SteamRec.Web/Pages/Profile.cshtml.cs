@@ -230,7 +230,6 @@ public class ProfileModel : PageModel
 
         // 3) Intersect with our dataset for display + content-based liked list
         var ownedById = owned.ToDictionary(o => o.appid, o => o.playtime_forever);
-        ExpandOwnedWithLinkedApps(ownedById);
 
         var matched = _games
             .Where(g => ownedById.ContainsKey(g.AppId))
@@ -271,31 +270,6 @@ public class ProfileModel : PageModel
         ApplyRecommendationPage(allRecommendations, pageNumber);
 
         return Page();
-    }
-
-    private void ExpandOwnedWithLinkedApps(Dictionary<int, int> ownedById)
-    {
-        var ownedSnapshot = ownedById.ToArray();
-        var fullGameMap = _games
-            .Where(g => g.FullGameAppId.HasValue && g.FullGameAppId.Value > 0)
-            .GroupBy(g => g.FullGameAppId!.Value)
-            .ToDictionary(g => g.Key, g => g.Select(x => x.AppId).ToList());
-
-        foreach (var (appId, playtime) in ownedSnapshot)
-        {
-            if (!fullGameMap.TryGetValue(appId, out var subAppIds))
-            {
-                continue;
-            }
-
-            foreach (var subAppId in subAppIds)
-            {
-                if (!ownedById.ContainsKey(subAppId))
-                {
-                    ownedById[subAppId] = playtime;
-                }
-            }
-        }
     }
 
     private List<RecommendationViewModel> LoadRecommendations(

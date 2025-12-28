@@ -174,7 +174,6 @@ public class RefreshSteamDataFunction
             if (details.releaseYear.HasValue) g.ReleaseYear = details.releaseYear.Value;
             if (!string.IsNullOrWhiteSpace(details.genres)) g.Genres = details.genres;
             if (!string.IsNullOrWhiteSpace(details.categories)) g.Categories = details.categories;
-            if (details.fullGameAppId.HasValue) g.FullGameAppId = details.fullGameAppId.Value;
         }
 
         var reviews = await _steam.GetReviewSummaryAsync(g.AppId);
