@@ -260,13 +260,15 @@ public class SteamProfileService
 
     private static bool TryCreateProfileUri(string input, out Uri uri)
     {
-        if (Uri.TryCreate(input, UriKind.Absolute, out uri))
+        if (Uri.TryCreate(input, UriKind.Absolute, out var parsed) && parsed is not null)
         {
+            uri = parsed;
             return true;
         }
 
-        if (Uri.TryCreate($"https://{input}", UriKind.Absolute, out uri))
+        if (Uri.TryCreate($"https://{input}", UriKind.Absolute, out parsed) && parsed is not null)
         {
+            uri = parsed;
             return true;
         }
 
