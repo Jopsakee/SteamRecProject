@@ -6,6 +6,9 @@
     background-size: cover;
     background-attachment: fixed;
     color: #c7d5e0;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
 }
 
 .steam-navbar {
@@ -21,17 +24,19 @@
 .steam-main {
     padding-top: 20px;
     padding-bottom: 40px;
+    flex: 1 0 auto;
 }
 
 .steam-footer {
     background-color: #171a21;
     border-top: 1px solid #1b2838;
-    padding: 32px 0 16px;
+    padding: 20px 0 12px;
+    margin-top: auto;
 }
 
 .steam-footer-inner {
     display: grid;
-    gap: 24px;
+    gap: 16px;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
     align-items: start;
 }
@@ -40,32 +45,33 @@
     color: #ffffff;
     font-weight: 700;
     letter-spacing: 0.05em;
-    font-size: 1.1rem;
-    margin-bottom: 6px;
+    font-size: 1rem;
+    margin-bottom: 4px;
 }
 
 .steam-footer-note {
     margin: 0;
     color: #afc2d5;
-    font-size: 0.95rem;
+    font-size: 0.88rem;
 }
 
 .steam-footer-heading {
     color: #ffffff;
     font-weight: 600;
-    margin-bottom: 8px;
+    margin-bottom: 6px;
+    font-size: 0.95rem;
 }
 
 .steam-footer-links {
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 4px;
 }
 
 .steam-footer-link {
     color: #8fb4d3;
     text-decoration: none;
-    font-size: 0.95rem;
+    font-size: 0.88rem;
 }
 
 .steam-footer-link:hover {
@@ -75,8 +81,8 @@
 
 .steam-footer-bottom {
     border-top: 1px solid #1b2838;
-    margin-top: 24px;
-    padding-top: 12px;
+    margin-top: 16px;
+    padding-top: 8px;
     text-align: center;
 }
 
