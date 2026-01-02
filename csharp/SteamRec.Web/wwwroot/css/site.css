@@ -80,10 +80,21 @@
 }
 
 .steam-footer-bottom {
-    border-top: 1px solid #1b2838;
+    position: relative;
     margin-top: 16px;
     padding-top: 8px;
     text-align: center;
+}
+
+.steam-footer-bottom::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 50%;
+    width: min(820px, 70%);
+    height: 1px;
+    transform: translateX(-50%);
+    background-color: rgba(255, 255, 255, 0.2);
 }
 
 .steam-container {
