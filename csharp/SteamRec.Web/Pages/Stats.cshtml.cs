@@ -90,7 +90,7 @@ public class StatsModel : PageModel
             .ThenByDescending(g => g.ReviewTotal)
             .ThenBy(g => g.Name, StringComparer.OrdinalIgnoreCase)
             .Take(take)
-            .Select(g => new ReviewEntry(g.Name, g.ReviewScoreAdj, g.ReviewTotal))
+            .Select(g => new ReviewEntry(g.AppId, g.Name, g.ReviewScoreAdj, g.ReviewTotal))
             .ToList();
     }
 
@@ -157,5 +157,5 @@ public class StatsModel : PageModel
 
     public record ChartPoint(string Label, int Count);
 
-    public record ReviewEntry(string Name, double ReviewScoreAdj, int ReviewTotal);
+    public record ReviewEntry(int AppId, string Name, double ReviewScoreAdj, int ReviewTotal);
 }

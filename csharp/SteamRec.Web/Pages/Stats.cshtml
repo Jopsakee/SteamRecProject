@@ -97,7 +97,7 @@
             </div>
         </div>
     </div>
-    <div class="row g-4 mt-1">
+ <div class="row g-4 mt-1">
         <div class="col-lg-6">
             <div class="steam-card p-3 h-100">
                 <h2 class="steam-section-title">Top 5 best reviewed games</h2>
@@ -118,7 +118,12 @@
                                 var label = ReviewLabel(game.ReviewScoreAdj, game.ReviewTotal);
                                 var badge = ReviewBadgeClass(game.ReviewScoreAdj, game.ReviewTotal);
                                 <tr>
-                                    <td class="review-name">@game.Name</td>
+                                    <td class="review-name">
+                                        <a class="steam-game-link"
+                                           href="https://store.steampowered.com/app/@game.AppId/"
+                                           target="_blank"
+                                           rel="noreferrer noopener">@game.Name</a>
+                                    </td>
                                     <td class="review-count">@game.ReviewTotal</td>
                                     <td class="review-score">
                                         <span class="badge @badge">@label</span>
@@ -155,7 +160,12 @@
                                 var label = ReviewLabel(game.ReviewScoreAdj, game.ReviewTotal);
                                 var badge = ReviewBadgeClass(game.ReviewScoreAdj, game.ReviewTotal);
                                 <tr>
-                                    <td class="review-name">@game.Name</td>
+                                    <td class="review-name">
+                                        <a class="steam-game-link"
+                                           href="https://store.steampowered.com/app/@game.AppId/"
+                                           target="_blank"
+                                           rel="noreferrer noopener">@game.Name</a>
+                                    </td>
                                     <td class="review-count">@game.ReviewTotal</td>
                                     <td class="review-score">
                                         <span class="badge @badge">@label</span>
