@@ -68,6 +68,39 @@
     --bs-table-hover-color: #ffffff;
 }
 
+.review-table {
+    table-layout: fixed;
+    width: 100%;
+}
+
+.review-table .review-name {
+    width: 45%;
+    overflow-wrap: anywhere;
+}
+
+.review-table .review-count {
+    width: 15%;
+}
+
+.review-table tbody .review-score {
+    width: 100%;
+    white-space: normal;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+}
+
+.review-table tbody .review-score .badge {
+    align-self: flex-start;
+    max-width: 100%;
+    white-space: nowrap;
+}
+
+.review-table .review-percent {
+    line-height: 1.1;
+}
+
 /* Dashboard */
 
 #radar-hover-card {
