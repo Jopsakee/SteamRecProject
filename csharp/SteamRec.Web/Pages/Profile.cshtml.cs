@@ -188,7 +188,7 @@ public class ProfileModel : PageModel
             ModelState.AddModelError(nameof(SteamId), iex.Message);
             return Page();
         }
-        
+
         // 1) Fetch owned games from Steam
         List<SteamProfileService.OwnedGame> owned;
         try
@@ -221,6 +221,24 @@ public class ProfileModel : PageModel
                 });
 
                 await _interactionRepo.UpsertManyAsync(steamId, docs);
+
+                try
+                {
+                    // Retrain so the current user can get CF recommendations immediately.
+                    var interactions = await _interactionRepo.GetAllAsync();
+                    var rows = interactions.Select(i => (
+                        steamId: i.SteamId,
+                        appId: (uint)i.AppId,
+                        playtimeForever: i.PlaytimeForever,
+                        playtime2Weeks: i.Playtime2Weeks
+                    ));
+
+                    _cf.TrainFromRows(rows);
+                }
+                catch (Exception ex)
+                {
+                    ModelState.AddModelError(string.Empty, "Collaborative model retraining failed: " + ex.Message);
+                }
             }
             catch (Exception ex)
             {
@@ -332,7 +350,7 @@ public class ProfileModel : PageModel
                     Name = r.game.Name,
                     Similarity = r.similarity,
                     OverallScore = r.overallScore,
-                        ReviewTotal = r.game.ReviewTotal,
+                    ReviewTotal = r.game.ReviewTotal,
                     ReviewScoreAdj = r.game.ReviewScoreAdj,
                     ThumbnailUrl = SteamImageHelper.BuildCapsuleUrl(r.game.AppId),
                     PriceEur = r.game.PriceEur,

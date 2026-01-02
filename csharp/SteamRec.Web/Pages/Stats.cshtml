@@ -97,7 +97,7 @@
             </div>
         </div>
     </div>
- <div class="row g-4 mt-1">
+    <div class="row g-4 mt-1">
         <div class="col-lg-6">
             <div class="steam-card p-3 h-100">
                 <h2 class="steam-section-title">Top 5 best reviewed games</h2>
@@ -119,10 +119,8 @@
                                 var badge = ReviewBadgeClass(game.ReviewScoreAdj, game.ReviewTotal);
                                 <tr>
                                     <td class="review-name">
-                                        <a class="steam-game-link"
-                                           href="https://store.steampowered.com/app/@game.AppId/"
-                                           target="_blank"
-                                           rel="noreferrer noopener">@game.Name</a>
+                                        <a class="steam-game-link" href="https://store.steampowered.com/app/@game.AppId/"
+                                            target="_blank" rel="noreferrer noopener">@game.Name</a>
                                     </td>
                                     <td class="review-count">@game.ReviewTotal</td>
                                     <td class="review-score">
@@ -161,10 +159,8 @@
                                 var badge = ReviewBadgeClass(game.ReviewScoreAdj, game.ReviewTotal);
                                 <tr>
                                     <td class="review-name">
-                                        <a class="steam-game-link"
-                                           href="https://store.steampowered.com/app/@game.AppId/"
-                                           target="_blank"
-                                           rel="noreferrer noopener">@game.Name</a>
+                                        <a class="steam-game-link" href="https://store.steampowered.com/app/@game.AppId/"
+                                            target="_blank" rel="noreferrer noopener">@game.Name</a>
                                     </td>
                                     <td class="review-count">@game.ReviewTotal</td>
                                     <td class="review-score">
@@ -186,136 +182,136 @@
 </div>
 
 @section Scripts {
-<script>
-    const tagLabels = @Html.Raw(tagLabels);
-    const tagCounts = @Html.Raw(tagCounts);
-    const topPlayedLabels = @Html.Raw(topPlayedLabels);
-    const topPlayedCounts = @Html.Raw(topPlayedCounts);
-    const yearLabels = @Html.Raw(yearLabels);
-    const yearCounts = @Html.Raw(yearCounts);
-    const priceLabels = @Html.Raw(priceLabels);
-    const priceCounts = @Html.Raw(priceCounts);
+    <script>
+        const tagLabels = @Html.Raw(tagLabels);
+        const tagCounts = @Html.Raw(tagCounts);
+        const topPlayedLabels = @Html.Raw(topPlayedLabels);
+        const topPlayedCounts = @Html.Raw(topPlayedCounts);
+        const yearLabels = @Html.Raw(yearLabels);
+        const yearCounts = @Html.Raw(yearCounts);
+        const priceLabels = @Html.Raw(priceLabels);
+        const priceCounts = @Html.Raw(priceCounts);
 
-    const sharedColors = [
-        "#66c0f4",
-        "#f5c542",
-        "#f28b82",
-        "#a7c5eb",
-        "#b39ddb",
-        "#ffb74d",
-        "#4dd0e1",
-        "#81c784",
-        "#ce93d8",
-        "#ff8a65",
-        "#90caf9",
-        "#6ee59f",
-    ];
+        const sharedColors = [
+            "#66c0f4",
+            "#f5c542",
+            "#f28b82",
+            "#a7c5eb",
+            "#b39ddb",
+            "#ffb74d",
+            "#4dd0e1",
+            "#81c784",
+            "#ce93d8",
+            "#ff8a65",
+            "#90caf9",
+            "#6ee59f",
+        ];
 
-    const axisColor = "#9fb7cc";
-    const gridColor = "rgba(255, 255, 255, 0.08)";
+        const axisColor = "#9fb7cc";
+        const gridColor = "rgba(255, 255, 255, 0.08)";
 
-    function baseOptions() {
-        return {
-            responsive: true,
-            plugins: {
-                legend: {
-                    display: false,
-                    labels: { color: axisColor }
-                },
-                tooltip: {
-                    backgroundColor: "rgba(27, 40, 56, 0.95)",
-                    borderColor: "rgba(102, 192, 244, 0.4)",
-                    borderWidth: 1,
-                    titleColor: "#ffffff",
-                    bodyColor: "#c7d5e0"
-                }
-            },
-            scales: {
-                x: {
-                    ticks: { color: axisColor },
-                    grid: { color: gridColor }
-                },
-                y: {
-                    ticks: { color: axisColor },
-                    grid: { color: gridColor },
-                    beginAtZero: true
-                }
-            }
-        };
-    }
-
-    new Chart(document.getElementById("tagChart"), {
-        type: "bar",
-        data: {
-            labels: tagLabels,
-            datasets: [{
-                label: "Games",
-                data: tagCounts,
-                backgroundColor: sharedColors
-            }]
-        },
-        options: baseOptions()
-    });
-
-    new Chart(document.getElementById("topPlayedChart"), {
-        type: "bar",
-        data: {
-            labels: topPlayedLabels,
-            datasets: [{
-                label: "Total reviews",
-                data: topPlayedCounts,
-                backgroundColor: sharedColors
-            }]
-        },
-        options: baseOptions()
-    });
-
-    new Chart(document.getElementById("yearChart"), {
-        type: "bar",
-        data: {
-            labels: yearLabels,
-            datasets: [{
-                label: "Games",
-                data: yearCounts,
-                backgroundColor: "rgba(102, 192, 244, 0.5)",
-                borderColor: "#66c0f4",
-                borderWidth: 1
-            }]
-        },
-        options: baseOptions()
-    });
-
-    const priceTotal = priceCounts.reduce((sum, value) => sum + value, 0);
-
-    new Chart(document.getElementById("priceChart"), {
-        type: "doughnut",
-        data: {
-            labels: priceLabels,
-            datasets: [{
-                data: priceCounts,
-                backgroundColor: sharedColors,
-                borderColor: "#1b2838",
-                borderWidth: 1
-            }]
-        },
-        options: {
-            responsive: true,
-            plugins: {
-                legend: {
-                    position: "bottom",
-                    labels: { color: axisColor }
+        function baseOptions() {
+            return {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        display: false,
+                        labels: { color: axisColor }
                     },
-                tooltip: {
-                    callbacks: {
-                        label: function(context) {
-                            const value = context.parsed || 0;
-                            const pct = priceTotal > 0 ? (value / priceTotal) * 100 : 0;
-                            return `${context.label}: ${value} (${pct.toFixed(1)}%)`;
+                    tooltip: {
+                        backgroundColor: "rgba(27, 40, 56, 0.95)",
+                        borderColor: "rgba(102, 192, 244, 0.4)",
+                        borderWidth: 1,
+                        titleColor: "#ffffff",
+                        bodyColor: "#c7d5e0"
+                    }
+                },
+                scales: {
+                    x: {
+                        ticks: { color: axisColor },
+                        grid: { color: gridColor }
+                    },
+                    y: {
+                        ticks: { color: axisColor },
+                        grid: { color: gridColor },
+                        beginAtZero: true
+                    }
+                }
+            };
+        }
+
+        new Chart(document.getElementById("tagChart"), {
+            type: "bar",
+            data: {
+                labels: tagLabels,
+                datasets: [{
+                    label: "Games",
+                    data: tagCounts,
+                    backgroundColor: sharedColors
+                }]
+            },
+            options: baseOptions()
+        });
+
+        new Chart(document.getElementById("topPlayedChart"), {
+            type: "bar",
+            data: {
+                labels: topPlayedLabels,
+                datasets: [{
+                    label: "Total reviews",
+                    data: topPlayedCounts,
+                    backgroundColor: sharedColors
+                }]
+            },
+            options: baseOptions()
+        });
+
+        new Chart(document.getElementById("yearChart"), {
+            type: "bar",
+            data: {
+                labels: yearLabels,
+                datasets: [{
+                    label: "Games",
+                    data: yearCounts,
+                    backgroundColor: "rgba(102, 192, 244, 0.5)",
+                    borderColor: "#66c0f4",
+                    borderWidth: 1
+                }]
+            },
+            options: baseOptions()
+        });
+
+        const priceTotal = priceCounts.reduce((sum, value) => sum + value, 0);
+
+        new Chart(document.getElementById("priceChart"), {
+            type: "doughnut",
+            data: {
+                labels: priceLabels,
+                datasets: [{
+                    data: priceCounts,
+                    backgroundColor: sharedColors,
+                    borderColor: "#1b2838",
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: "bottom",
+                        labels: { color: axisColor }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function (context) {
+                                const value = context.parsed || 0;
+                                const pct = priceTotal > 0 ? (value / priceTotal) * 100 : 0;
+                                return `${context.label}: ${value} (${pct.toFixed(1)}%)`;
+                            }
                         }
                     }
                 }
             }
-        }
-    });
-</script>
+        });
+    </script>
 }

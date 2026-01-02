@@ -24,9 +24,11 @@ public class FeatureBuilder
     private Dictionary<string, double> _means = new();
     private Dictionary<string, double> _stds = new();
 
+    // Review metrics get extra weight in the feature space.
     private const double REVIEW_SCORE_INTERNAL_WEIGHT = 2.0;
     private const double REVIEW_VOL_INTERNAL_WEIGHT = 1.2;
 
+    // These block weights push the model to care more about tags/genres.
     private const double GENRE_BLOCK_WEIGHT = 1.8;
     private const double TAG_BLOCK_WEIGHT = 2.8;
     private const double CAT_BLOCK_WEIGHT = 1.2;
@@ -52,7 +54,7 @@ public class FeatureBuilder
         TagVocab = tagSet.OrderBy(x => x).ToList();
         CategoryVocab = catSet.OrderBy(x => x).ToList();
 
-        // 2) Compute numeric mean/std
+        // 2) Compute numeric mean/std so we can build z-scores.
         var numericValues = _numericNames.ToDictionary(
             name => name,
             _ => new List<double>()

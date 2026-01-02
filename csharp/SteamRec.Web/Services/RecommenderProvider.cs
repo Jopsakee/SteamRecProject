@@ -27,6 +27,7 @@ public sealed class RecommenderProvider : IRecommenderProvider
     {
         Console.WriteLine("[SteamRec] Loading games from MongoDB (streamed)...");
 
+        // Stream to avoid loading the full collection into memory at once.
         var games = new List<GameRecord>(capacity: 150_000);
 
         await foreach (var doc in _repository.StreamAllAsync())

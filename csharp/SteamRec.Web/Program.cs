@@ -20,6 +20,7 @@ builder.Services.AddSingleton<CollaborativeFilteringRecommender>(sp =>
 
     try
     {
+        // Train once at startup; the profile page can retrain after new interactions.
         var repo = sp.GetRequiredService<InteractionRepository>();
         var interactions = repo.GetAllAsync().GetAwaiter().GetResult();
 

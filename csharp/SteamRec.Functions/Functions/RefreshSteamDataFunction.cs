@@ -33,6 +33,7 @@ public class RefreshSteamDataFunction
     [Function("RefreshSteamData")]
     public async Task Run([TimerTrigger("%SteamRecRefreshSchedule%")] object timerInfo)
     {
+        // This function is the scraper "heartbeat": hydrate missing apps and refresh stale ones.
         var batchSize = int.TryParse(_config["SteamRec:RefreshBatchSize"], out var n) ? n : 200;
         var cc = _config["SteamRec:CountryCode"] ?? "be";
         var lang = _config["SteamRec:Language"] ?? "en";
@@ -71,6 +72,7 @@ public class RefreshSteamDataFunction
         {
             if ((DateTime.UtcNow - started).TotalSeconds > timeBudgetSeconds)
             {
+                // Azure Functions has a hard time budget; stop politely.
                 _log.LogWarning("[RefreshSteamData] Time budget reached; stopping early. ok={ok}, fail={fail}, skippedNonGame={skipped}",
                     ok, fail, skippedNonGame);
                 break;
@@ -122,6 +124,7 @@ public class RefreshSteamDataFunction
         {
             if ((DateTime.UtcNow - started).TotalSeconds > timeBudgetSeconds)
             {
+                // Same time budget check for stale refresh pass.
                 _log.LogWarning("[RefreshSteamData] Time budget reached; stopping early. ok={ok}, fail={fail}, skippedNonGame={skipped}",
                     ok, fail, skippedNonGame);
                 break;
