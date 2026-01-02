@@ -68,6 +68,14 @@
     gap: 4px;
 }
 
+.steam-footer-nav {
+    padding-left: 100px;
+}
+
+.steam-footer-brand {
+    margin-left: 8px;
+}
+
 .steam-footer-link {
     color: #8fb4d3;
     text-decoration: none;
