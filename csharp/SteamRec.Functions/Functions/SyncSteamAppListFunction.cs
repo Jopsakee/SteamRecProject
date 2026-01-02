@@ -33,7 +33,8 @@ public class SyncSteamAppListFunction
     {
         var started = DateTime.UtcNow;
 
-        // Tune these in Azure App Settings if needed
+        // Pulls a paged list of Steam apps and stores it in Mongo.
+        // Can be tuned in env variables on Azure.
         var pageSize = int.TryParse(_config["SteamRec:AppListPageSize"], out var ps) ? ps : 50000;
         var maxPages = int.TryParse(_config["SteamRec:AppListMaxPagesPerRun"], out var mp) ? mp : 10;
         var budgetSec = int.TryParse(_config["SteamRec:AppListTimeBudgetSeconds"], out var tb) ? tb : 240;

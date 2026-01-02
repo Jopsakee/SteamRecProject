@@ -18,6 +18,7 @@ public class ContentBasedRecommender
     // Expose number of games loaded
     public int GameCount => _games.Count;
 
+    // Simple weighting for the final score. Tuned by hand for our dataset.
     private const double W_SIM = 1.8;
     private const double W_REV = 0.5;
     private const double W_VOL = 0.6;
@@ -27,6 +28,7 @@ public class ContentBasedRecommender
         _games = games ?? throw new ArgumentNullException(nameof(games));
         _byAppId = games.ToDictionary(g => g.AppId, g => g);
 
+        // FeatureBuilder prepares numeric + tag/genre/category vectors per game.
         _featureBuilder = new FeatureBuilder();
         _featureBuilder.BuildFeatures(_games);
 
@@ -46,6 +48,7 @@ public class ContentBasedRecommender
         if (!_byAppId.TryGetValue(appId, out var target))
             throw new ArgumentException($"Unknown appId {appId}");
 
+        // Uses genre overlap as a cheap filter to keep comparisons reasonable.
         var refGenres = target.Genres;
         var targetVec = target.Features;
 
@@ -69,7 +72,7 @@ public class ContentBasedRecommender
             .Take(maxCandidates)
             .ToList();
 
-        // re-ranking with reviews
+        // re-ranking with reviews (quality + popularity)
         for (int i = 0; i < candidates.Count; i++)
         {
             var (g, sim, _) = candidates[i];
@@ -96,12 +99,12 @@ public class ContentBasedRecommender
         if (likedGames.Count == 0)
             throw new ArgumentException("None of the liked appids were found in the dataset.");
 
-        // Union of genres across liked games
+        // Union of genres across liked games to keep similar themes.
         var likedGenresUnion = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var g in likedGames)
             likedGenresUnion.UnionWith(g.Genres);
 
-        // Average feature vector for liked games
+        // Average feature vector for liked games (a simple "taste profile").
         int dim = likedGames[0].Features.Length;
         var userVec = new float[dim];
         foreach (var g in likedGames)
@@ -132,7 +135,7 @@ public class ContentBasedRecommender
             .Take(maxCandidates)
             .ToList();
 
-        // re-ranking with reviews
+        // re-ranking with reviews (quality + popularity)
         for (int i = 0; i < candidates.Count; i++)
         {
             var (g, sim, _) = candidates[i];

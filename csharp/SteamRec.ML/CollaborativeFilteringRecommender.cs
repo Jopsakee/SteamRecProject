@@ -1,9 +1,7 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using Microsoft.ML;
-using Microsoft.ML.Data;
 using Microsoft.ML.Trainers;
 
 namespace SteamRec.ML;
@@ -30,6 +28,7 @@ public class CollaborativeFilteringRecommender
             {
                 LastError = null;
 
+                // Clean the raw input before we feed it to ML.NET.
                 var raw = rows
                     .Where(r => !string.IsNullOrWhiteSpace(r.steamId))
                     .Where(r => r.appId > 0)
@@ -52,31 +51,32 @@ public class CollaborativeFilteringRecommender
                 _knownAppIds = trainRows.Select(x => x.AppId).ToHashSet();
                 _knownUsers = trainRows.Select(x => x.UserId).ToHashSet(StringComparer.Ordinal);
 
-            if (_knownUsers.Count < 2 || _knownAppIds.Count < 50)
+                if (_knownUsers.Count < 2 || _knownAppIds.Count < 50)
                     throw new InvalidOperationException(
                         $"Not enough interaction data for CF. Users={_knownUsers.Count}, Items={_knownAppIds.Count}. Add more SteamIDs.");
 
-            var trainDv = _ml.Data.LoadFromEnumerable(trainRows);
+                var trainDv = _ml.Data.LoadFromEnumerable(trainRows);
 
-            var pipeline =
-                    _ml.Transforms.Conversion.MapValueToKey("userIdEncoded", nameof(InteractionTrain.UserId))
-                    .Append(_ml.Transforms.Conversion.MapValueToKey("appIdEncoded", nameof(InteractionTrain.AppId)))
-                    .Append(_ml.Recommendation().Trainers.MatrixFactorization(new MatrixFactorizationTrainer.Options
-                    {
-                        MatrixColumnIndexColumnName = "userIdEncoded",
-                        MatrixRowIndexColumnName = "appIdEncoded",
-                        LabelColumnName = nameof(InteractionTrain.Rating),
+                // Matrix factorization for implicit feedback (playtime as signal).
+                var pipeline =
+                        _ml.Transforms.Conversion.MapValueToKey("userIdEncoded", nameof(InteractionTrain.UserId))
+                        .Append(_ml.Transforms.Conversion.MapValueToKey("appIdEncoded", nameof(InteractionTrain.AppId)))
+                        .Append(_ml.Recommendation().Trainers.MatrixFactorization(new MatrixFactorizationTrainer.Options
+                        {
+                            MatrixColumnIndexColumnName = "userIdEncoded",
+                            MatrixRowIndexColumnName = "appIdEncoded",
+                            LabelColumnName = nameof(InteractionTrain.Rating),
 
-                    // Implicit feedback setup
-                        LossFunction = MatrixFactorizationTrainer.LossFunctionType.SquareLossOneClass,
-                        Alpha = 0.01f,
-                        Lambda = 0.025f,
+                            // Implicit feedback setup
+                            LossFunction = MatrixFactorizationTrainer.LossFunctionType.SquareLossOneClass,
+                            Alpha = 0.01f,
+                            Lambda = 0.025f,
 
-                        NumberOfIterations = 30,
-                        ApproximationRank = 64
-                    }));
+                            NumberOfIterations = 30,
+                            ApproximationRank = 64
+                        }));
 
-            _model = pipeline.Fit(trainDv);
+                _model = pipeline.Fit(trainDv);
             }
             catch (Exception ex)
             {
@@ -87,39 +87,6 @@ public class CollaborativeFilteringRecommender
         }
     }
 
-    /// <summary>
-    /// Train from your interactions.csv (steamid,appid,playtime_forever,playtime_2weeks).
-    /// </summary>
-    public void TrainFromCsv(string interactionsCsvPath)
-    {
-        try
-        {
-            LastError = null;
-
-            if (!File.Exists(interactionsCsvPath))
-                throw new FileNotFoundException("interactions.csv not found", interactionsCsvPath);
-
-            var rawDv = _ml.Data.LoadFromTextFile<InteractionRaw>(
-                path: interactionsCsvPath,
-                hasHeader: true,
-                separatorChar: ',');
-
-            var raw = _ml.Data.CreateEnumerable<InteractionRaw>(rawDv, reuseRowObject: false)
-                .Where(r => !string.IsNullOrWhiteSpace(r.SteamId))
-                .Where(r => r.AppId > 0)
-                .Select(r => (r.SteamId.Trim(), r.AppId, r.PlaytimeForever, r.Playtime2Weeks));
-
-            TrainFromRows(raw);
-        }
-        catch (Exception ex)
-        {
-            _model = null;
-            LastError = ex.Message;
-            throw;
-        }
-    }
-
-    // ------------------- Recommend -------------------
 
     public List<(uint appId, float score)> RecommendForUser(
         string userId,
@@ -131,6 +98,7 @@ public class CollaborativeFilteringRecommender
         HashSet<string> knownUsers;
         HashSet<uint> knownAppIds;
 
+        // Snapshot the model and ID sets so training can't change them mid-request.
         lock (_trainLock)
         {
             model = _model;
@@ -169,16 +137,6 @@ public class CollaborativeFilteringRecommender
             .OrderByDescending(x => x.Score)
             .Take(topN)
             .ToList();
-    }
-
-    // ----------------- Internal schema -----------------
-
-    private class InteractionRaw
-    {
-        [LoadColumn(0)] public string SteamId { get; set; } = "";
-        [LoadColumn(1)] public uint AppId { get; set; }
-        [LoadColumn(2)] public float PlaytimeForever { get; set; }
-        [LoadColumn(3)] public float Playtime2Weeks { get; set; }
     }
 
     private class InteractionTrain
