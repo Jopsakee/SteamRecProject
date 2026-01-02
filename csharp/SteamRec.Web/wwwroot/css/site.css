@@ -23,6 +23,63 @@
     padding-bottom: 40px;
 }
 
+.steam-footer {
+    background-color: #171a21;
+    border-top: 1px solid #1b2838;
+    padding: 32px 0 16px;
+}
+
+.steam-footer-inner {
+    display: grid;
+    gap: 24px;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    align-items: start;
+}
+
+.steam-footer-title {
+    color: #ffffff;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    font-size: 1.1rem;
+    margin-bottom: 6px;
+}
+
+.steam-footer-note {
+    margin: 0;
+    color: #afc2d5;
+    font-size: 0.95rem;
+}
+
+.steam-footer-heading {
+    color: #ffffff;
+    font-weight: 600;
+    margin-bottom: 8px;
+}
+
+.steam-footer-links {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.steam-footer-link {
+    color: #8fb4d3;
+    text-decoration: none;
+    font-size: 0.95rem;
+}
+
+.steam-footer-link:hover {
+    color: #ffffff;
+    text-decoration: none;
+}
+
+.steam-footer-bottom {
+    border-top: 1px solid #1b2838;
+    margin-top: 24px;
+    padding-top: 12px;
+    text-align: center;
+}
+
 .steam-container {
     max-width: 1100px;
     margin: 0 auto;

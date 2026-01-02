@@ -37,6 +37,27 @@
             @RenderBody()
         </main>
     </div>
+    <footer class="steam-footer">
+        <div class="container-fluid steam-footer-inner">
+            <div class="steam-footer-brand">
+                <div class="steam-footer-title">SteamRec</div>
+                <p class="steam-footer-note">Ever struggle to find what game to play next? SteamRec will help you alleviate that problem. With a couple clicks you will have tens or even hundreds of recommendations catered to you in a flash.</p>
+            </div>
+            <div class="steam-footer-links">
+                <div class="steam-footer-heading">Navigate to</div>
+                <a class="steam-footer-link" asp-page="/Index">Game Recommender</a>
+                <a class="steam-footer-link" asp-page="/Profile">Profile Recommender</a>
+                <a class="steam-footer-link" asp-page="/Stats">Stats</a>
+            </div>
+            <div class="steam-footer-links">
+                <span class="steam-footer-link">Steam and the Steam logo are trademarks and/or registered trademarks of Valve Corporation in the U.S. and/or other countries.</span>
+                <span class="steam-footer-link">SteamRec is not affiliated with Valve Corporation. All rights to Steam and related assets are owned by Valve.</span>
+            </div>
+        </div>
+        <div class="steam-footer-bottom small text-muted">
+            © @DateTime.UtcNow.Year SteamRec. All rights reserved.
+        </div>
+    </footer>
 
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
