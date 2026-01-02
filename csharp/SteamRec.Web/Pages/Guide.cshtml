@@ -10,7 +10,7 @@
 
     <div class="row g-4 mb-4" role="tablist" aria-label="Guide sections">
         <div class="col-lg-4">
-            <button class="steam-card p-3 h-100 w-100 text-start border-0"
+            <button class="steam-card guide-option p-3 h-100 w-100 text-start border-0"
                     type="button"
                     data-guide-target="game"
                     aria-pressed="false">
@@ -19,7 +19,7 @@
             </button>
         </div>
         <div class="col-lg-4">
-            <button class="steam-card p-3 h-100 w-100 text-start border-0"
+            <button class="steam-card guide-option p-3 h-100 w-100 text-start border-0"
                     type="button"
                     data-guide-target="profile"
                     aria-pressed="false">
@@ -28,7 +28,7 @@
             </button>
         </div>
         <div class="col-lg-4">
-            <button class="steam-card p-3 h-100 w-100 text-start border-0"
+            <button class="steam-card guide-option p-3 h-100 w-100 text-start border-0"
                     type="button"
                     data-guide-target="stats"
                     aria-pressed="false">
@@ -79,7 +79,9 @@
 
         const showGuidePanel = (target) => {
             guidePanels.forEach((panel) => {
-                panel.hidden = panel.dataset.guidePanel !== target;
+                const isActive = panel.dataset.guidePanel === target;
+                panel.hidden = !isActive;
+                panel.classList.toggle("guide-panel-active", isActive);
             });
 
             guideButtons.forEach((button) => {
