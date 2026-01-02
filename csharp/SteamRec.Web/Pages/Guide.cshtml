@@ -5,70 +5,129 @@
 }
 
 <div class="steam-container mt-4">
+    <div id="guide-top"></div>
     <h1 class="steam-title mb-2">SteamRec Guide</h1>
     <p class="steam-subtitle">A quick tour of each page and how to get the most out of the recommendations.</p>
 
     <div class="row g-4 mb-4" role="tablist" aria-label="Guide sections">
-        <div class="col-lg-4">
-            <button class="steam-card guide-option p-3 h-100 w-100 text-start border-0"
-                    type="button"
-                    data-guide-target="game"
-                    aria-pressed="false">
+        <div class="col-lg-6">
+            <button class="steam-card guide-option p-3 h-100 w-100 text-start border-0" type="button"
+                data-guide-target="game" aria-pressed="false">
                 <h2 class="steam-section-title">Game Recommender</h2>
                 <p class="text-muted mb-0">Find games similar to one you already love.</p>
             </button>
         </div>
-        <div class="col-lg-4">
-            <button class="steam-card guide-option p-3 h-100 w-100 text-start border-0"
-                    type="button"
-                    data-guide-target="profile"
-                    aria-pressed="false">
+        <div class="col-lg-6">
+            <button class="steam-card guide-option p-3 h-100 w-100 text-start border-0" type="button"
+                data-guide-target="profile" aria-pressed="false">
                 <h2 class="steam-section-title">Profile Recommender</h2>
                 <p class="text-muted mb-0">Personalized picks based on your Steam profile.</p>
-            </button>
-        </div>
-        <div class="col-lg-4">
-            <button class="steam-card guide-option p-3 h-100 w-100 text-start border-0"
-                    type="button"
-                    data-guide-target="stats"
-                    aria-pressed="false">
-                <h2 class="steam-section-title">Stats</h2>
-                <p class="text-muted mb-0">Explore the Steam dataset behind the recommendations.</p>
             </button>
         </div>
     </div>
 
     <div class="steam-card p-4" id="guide-detail">
         <div data-guide-panel="game" hidden>
-            <h2 class="steam-section-title">Game Recommender Guide</h2>
-            <p class="text-muted">Step-by-step walkthrough for the By Game page.</p>
+            <h2 class="steam-section-title">How to use</h2>
+            <p class="text-muted">Step-by-step walkthrough for the Game Recommender</p>
             <ol class="mb-0">
-                <li>Search for a game title in the <strong>By Game</strong> page.</li>
-                <li>Select the exact match from the results.</li>
-                <li>Review the similarity scores, reviews, and store links.</li>
-                <li>Use the recommendations table to discover related games.</li>
+                <li class="mb-4">
+                    Search for a game title on the <a asp-page="/Index" class="steam-game-link"><strong>By
+                            Game</strong></a> page. You will now get a list of games fitting your search.
+                    <div class="mt-3">
+                        <img src="~/images/GameRecommenderStep1.png"
+                            alt="Search for a game title in the Game Recommender" class="img-fluid rounded shadow-sm" />
+                    </div>
+                </li>
+                <li class="mb-4">
+                    Select the corresponding game title from the search results.
+                    <div class="mt-3">
+                        <img src="~/images/GameRecommenderStep2.png"
+                            alt="Select the matching game from the search results"
+                            class="img-fluid rounded shadow-sm" />
+                    </div>
+                </li>
+                <li class="mb-4">
+                    Click the <strong>Get Recommendations</strong> button after selecting the game and wait for the
+                    model to calculate similar recommendations.
+                    <div class="mt-3">
+                        <img src="~/images/GameRecommenderStep3.png"
+                            alt="Press the Get Recommendations button to generate results"
+                            class="img-fluid rounded shadow-sm" />
+                    </div>
+                </li>
+                <li>
+                    Review the recommendations and navigate through them using the <strong>Previous</strong> and
+                    <strong>Next</strong> buttons.
+                    <div class="mt-3">
+                        <img src="~/images/GameRecommenderStep4.png"
+                            alt="Browse recommendations using the Previous and Next buttons"
+                            class="img-fluid rounded shadow-sm" />
+                    </div>
+                </li>
             </ol>
         </div>
         <div data-guide-panel="profile" hidden>
-            <h2 class="steam-section-title">Profile Recommender Guide</h2>
+            <h2 class="steam-section-title">How to use</h2>
             <p class="text-muted">Step-by-step walkthrough for the By Profile page.</p>
             <ol class="mb-0">
-                <li>Enter your Steam profile URL or ID on the <strong>By Profile</strong> page.</li>
-                <li>Choose between the content-based and collaborative recommenders.</li>
-                <li>Review the personalized list and compare genres, tags, and review quality.</li>
-                <li>Use the results to discover games aligned with your overall taste.</li>
+                <li class="mb-4">
+                    Go to your Steam profile and copy the profile URL from the upper left corner.
+                    <div class="mt-3">
+                        <img src="~/images/ProfileRecommenderStep1.png"
+                            alt="Copy your Steam profile URL from the profile page"
+                            class="img-fluid rounded shadow-sm" />
+                    </div>
+                </li>
+                <li class="mb-4">
+                    Navigate to the <a asp-page="/Profile" class="steam-game-link"><strong>By Profile</strong></a> page
+                    and paste the link into the profile URL field.
+                    <div class="mt-3">
+                        <img src="~/images/ProfileRecommenderStep2.png"
+                            alt="Paste the Steam profile URL into the By Profile form"
+                            class="img-fluid rounded shadow-sm" />
+                    </div>
+                </li>
+                <li class="mb-4">
+                    Select the model you want to use:
+                    <ul class="mt-2">
+                        <li><strong>Content-based</strong> (based on tags, reviews, and metadata from your library).
+                        </li>
+                        <li><strong>Collaborative</strong> (based on what other players play and like the most).</li>
+                    </ul>
+                    <div class="mt-3">
+                        <img src="~/images/ProfileRecommenderStep3.png"
+                            alt="Choose the content-based or collaborative model" class="img-fluid rounded shadow-sm" />
+                    </div>
+                </li>
+                <li class="mb-4">
+                    (Un)check the box to indicate whether we can use your library data to train our model. This only
+                    includes
+                    owned games and playtime and is optional, but appreciated.
+                    <div class="mt-3">
+                        <img src="~/images/ProfileRecommenderStep4.png" alt="Choose whether to allow library data usage"
+                            class="img-fluid rounded shadow-sm" />
+                    </div>
+                </li>
+                <li>
+                    Click <strong>Get Recommendations</strong> to first see your top played games.
+                    <div class="mt-3">
+                        <img src="~/images/ProfileRecommenderStep5.png" alt="View top played games from your profile"
+                            class="img-fluid rounded shadow-sm" />
+                    </div>
+                    <div class="mt-3">
+                        Your recommendations appear below the top played list, and you can use the
+                        <strong>Previous</strong> and <strong>Next</strong> buttons at the bottom to navigate.
+                        <img src="~/images/ProfileRecommenderStep6.png"
+                            alt="Browse recommendations with previous and next buttons"
+                            class="img-fluid rounded shadow-sm mt-3" />
+                    </div>
+                </li>
             </ol>
         </div>
-        <div data-guide-panel="stats" hidden>
-            <h2 class="steam-section-title">Stats Guide</h2>
-            <p class="text-muted">Step-by-step walkthrough for the Stats page.</p>
-            <ol class="mb-0">
-                <li>Review the dataset totals (games, free titles, and average price).</li>
-                <li>Use the charts to explore tags, release timelines, and price buckets.</li>
-                <li>Check the best and worst reviewed lists for quick insights.</li>
-                <li>Use these insights to understand why recommendations surface.</li>
-            </ol>
-        </div>
+    </div>
+    <div class="text-center mt-4">
+        <a href="#guide-top" class="btn btn-outline-light">Back to top</a>
     </div>
 </div>
 
