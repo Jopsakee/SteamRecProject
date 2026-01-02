@@ -1,0 +1,99 @@
+@page
+@model SteamRec.Web.Pages.GuideModel
+@{
+    ViewData["Title"] = "Guide";
+}
+
+<div class="steam-container mt-4">
+    <h1 class="steam-title mb-2">SteamRec Guide</h1>
+    <p class="steam-subtitle">A quick tour of each page and how to get the most out of the recommendations.</p>
+
+    <div class="row g-4 mb-4" role="tablist" aria-label="Guide sections">
+        <div class="col-lg-4">
+            <button class="steam-card p-3 h-100 w-100 text-start border-0"
+                    type="button"
+                    data-guide-target="game"
+                    aria-pressed="false">
+                <h2 class="steam-section-title">Game Recommender</h2>
+                <p class="text-muted mb-0">Find games similar to one you already love.</p>
+            </button>
+        </div>
+        <div class="col-lg-4">
+            <button class="steam-card p-3 h-100 w-100 text-start border-0"
+                    type="button"
+                    data-guide-target="profile"
+                    aria-pressed="false">
+                <h2 class="steam-section-title">Profile Recommender</h2>
+                <p class="text-muted mb-0">Personalized picks based on your Steam profile.</p>
+            </button>
+        </div>
+        <div class="col-lg-4">
+            <button class="steam-card p-3 h-100 w-100 text-start border-0"
+                    type="button"
+                    data-guide-target="stats"
+                    aria-pressed="false">
+                <h2 class="steam-section-title">Stats</h2>
+                <p class="text-muted mb-0">Explore the Steam dataset behind the recommendations.</p>
+            </button>
+        </div>
+    </div>
+
+    <div class="steam-card p-4" id="guide-detail">
+        <div data-guide-panel="game" hidden>
+            <h2 class="steam-section-title">Game Recommender Guide</h2>
+            <p class="text-muted">Step-by-step walkthrough for the By Game page.</p>
+            <ol class="mb-0">
+                <li>Search for a game title in the <strong>By Game</strong> page.</li>
+                <li>Select the exact match from the results.</li>
+                <li>Review the similarity scores, reviews, and store links.</li>
+                <li>Use the recommendations table to discover related games.</li>
+            </ol>
+        </div>
+        <div data-guide-panel="profile" hidden>
+            <h2 class="steam-section-title">Profile Recommender Guide</h2>
+            <p class="text-muted">Step-by-step walkthrough for the By Profile page.</p>
+            <ol class="mb-0">
+                <li>Enter your Steam profile URL or ID on the <strong>By Profile</strong> page.</li>
+                <li>Choose between the content-based and collaborative recommenders.</li>
+                <li>Review the personalized list and compare genres, tags, and review quality.</li>
+                <li>Use the results to discover games aligned with your overall taste.</li>
+            </ol>
+        </div>
+        <div data-guide-panel="stats" hidden>
+            <h2 class="steam-section-title">Stats Guide</h2>
+            <p class="text-muted">Step-by-step walkthrough for the Stats page.</p>
+            <ol class="mb-0">
+                <li>Review the dataset totals (games, free titles, and average price).</li>
+                <li>Use the charts to explore tags, release timelines, and price buckets.</li>
+                <li>Check the best and worst reviewed lists for quick insights.</li>
+                <li>Use these insights to understand why recommendations surface.</li>
+            </ol>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        const guideButtons = document.querySelectorAll("[data-guide-target]");
+        const guidePanels = document.querySelectorAll("[data-guide-panel]");
+
+        const showGuidePanel = (target) => {
+            guidePanels.forEach((panel) => {
+                panel.hidden = panel.dataset.guidePanel !== target;
+            });
+
+            guideButtons.forEach((button) => {
+                const isActive = button.dataset.guideTarget === target;
+                button.setAttribute("aria-pressed", isActive ? "true" : "false");
+            });
+        };
+
+        guideButtons.forEach((button) => {
+            button.addEventListener("click", () => showGuidePanel(button.dataset.guideTarget));
+        });
+
+        if (guideButtons.length) {
+            showGuidePanel(guideButtons[0].dataset.guideTarget);
+        }
+    </script>
+}
