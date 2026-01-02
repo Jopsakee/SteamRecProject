@@ -221,6 +221,23 @@ public class ProfileModel : PageModel
                 });
 
                 await _interactionRepo.UpsertManyAsync(steamId, docs);
+                
+                try
+                {
+                    var interactions = await _interactionRepo.GetAllAsync();
+                    var rows = interactions.Select(i => (
+                        steamId: i.SteamId,
+                        appId: (uint)i.AppId,
+                        playtimeForever: i.PlaytimeForever,
+                        playtime2Weeks: i.Playtime2Weeks
+                    ));
+
+                    _cf.TrainFromRows(rows);
+                }
+                catch (Exception ex)
+                {
+                    ModelState.AddModelError(string.Empty, "Collaborative model retraining failed: " + ex.Message);
+                }
             }
             catch (Exception ex)
             {
