@@ -27,6 +27,9 @@
                         <li class="nav-item">
                             <a class="nav-link @(Context.Request.Path.StartsWithSegments("/Stats") ? "active" : "")" asp-page="/Stats">Stats</a>
                         </li>
+                        <li class="nav-item">
+                            <a class="nav-link @(Context.Request.Path.StartsWithSegments("/Guide") ? "active" : "")" asp-page="/Guide">Guide</a>
+                        </li>
                     </ul>
                 </div>
             </div>
@@ -48,6 +51,7 @@
                 <a class="steam-footer-link" asp-page="/Index">Game Recommender</a>
                 <a class="steam-footer-link" asp-page="/Profile">Profile Recommender</a>
                 <a class="steam-footer-link" asp-page="/Stats">Stats</a>
+                <a class="steam-footer-link" asp-page="/Guide">Guide</a>
             </div>
             <div class="steam-footer-links">
                 <span class="steam-footer-link">Steam and the Steam logo are trademarks and/or registered trademarks of Valve Corporation in the U.S. and/or other countries.</span>

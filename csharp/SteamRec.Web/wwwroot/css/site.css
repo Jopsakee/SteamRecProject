@@ -130,6 +130,43 @@
     border: 1px solid #000000;
 }
 
+.guide-option {
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+    cursor: pointer;
+}
+
+.guide-option:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.6);
+    border-color: rgba(102, 192, 244, 0.6);
+}
+
+.guide-option:focus-visible {
+    outline: 2px solid rgba(102, 192, 244, 0.8);
+    outline-offset: 2px;
+}
+
+.guide-option[aria-pressed="true"] {
+    border-color: rgba(102, 192, 244, 0.9);
+    box-shadow: 0 12px 26px rgba(20, 45, 70, 0.6);
+}
+
+.guide-panel-active {
+    animation: guide-panel-fade 0.35s ease;
+}
+
+@keyframes guide-panel-fade {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
 .steam-btn-primary {
     background-color: #66c0f4;
     border-color: #66c0f4;
