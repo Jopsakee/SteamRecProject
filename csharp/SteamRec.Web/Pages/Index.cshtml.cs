@@ -86,14 +86,17 @@ public class IndexModel : PageModel
 
      private void BuildSearchResults()
     {
-        if (!string.IsNullOrWhiteSpace(SearchTerm))
-        {
-            SearchResults = _games
-                .Where(g => g.Name.Contains(SearchTerm, StringComparison.OrdinalIgnoreCase))
-                .OrderBy(g => g.Name)
-                .Take(25)
-                .ToList();
-        }
+        var term = SearchTerm?.Trim();
+        if (string.IsNullOrWhiteSpace(term))
+            return;
+
+        SearchResults = _games
+            .Where(g => g.Name.Contains(term, StringComparison.OrdinalIgnoreCase))
+            .OrderByDescending(g => g.Name.Equals(term, StringComparison.OrdinalIgnoreCase))
+            .ThenByDescending(g => g.Name.StartsWith(term, StringComparison.OrdinalIgnoreCase))
+            .ThenBy(g => g.Name)
+            .Take(50)
+            .ToList();
     }
     private async Task LoadRecommendationsAsync(int pageNumber)
     {

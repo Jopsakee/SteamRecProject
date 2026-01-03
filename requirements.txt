@@ -1,7 +1,0 @@
-requests
-pandas
-python-dotenv
-numpy
-matplotlib
-scikit-learn
-pymongo

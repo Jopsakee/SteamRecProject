@@ -28,6 +28,7 @@ public class SteamProfileService
         public int playtime_2weeks { get; set; }
     }
 
+    // DTOs matching Steam Web API JSON payloads.
     private class OwnedGamesInnerResponse
     {
         public List<OwnedGame>? games { get; set; }
@@ -88,6 +89,7 @@ public class SteamProfileService
             return trimmed;
         }
 
+        // Accept full profile URLs or vanity names and normalize to SteamID64.
         if (TryParseProfileUrl(trimmed, out var steamId, out var vanity))
         {
             if (!string.IsNullOrWhiteSpace(steamId))
@@ -116,6 +118,7 @@ public class SteamProfileService
 
         var apiKey = GetApiKey();
 
+        // We check profile visibility before hitting the owned games endpoint.
         await EnsureProfileIsPublicAsync(apiKey, steamId);
         var url =
             $"https://api.steampowered.com/IPlayerService/GetOwnedGames/v1/?" +
@@ -260,13 +263,15 @@ public class SteamProfileService
 
     private static bool TryCreateProfileUri(string input, out Uri uri)
     {
-        if (Uri.TryCreate(input, UriKind.Absolute, out uri))
+        if (Uri.TryCreate(input, UriKind.Absolute, out var parsed) && parsed is not null)
         {
+            uri = parsed;
             return true;
         }
 
-        if (Uri.TryCreate($"https://{input}", UriKind.Absolute, out uri))
+        if (Uri.TryCreate($"https://{input}", UriKind.Absolute, out parsed) && parsed is not null)
         {
+            uri = parsed;
             return true;
         }
 

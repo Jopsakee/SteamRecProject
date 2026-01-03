@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
@@ -172,11 +173,19 @@ public class ProfileModel : PageModel
     private async Task<IActionResult> HandleRequestAsync(int pageNumber)
     {
         if (string.IsNullOrWhiteSpace(SteamId))
+        {
+            ModelState.AddModelError(nameof(SteamId), "Enter a SteamID64 or a steamcommunity.com profile URL.");
             return Page();
-
+        }
+        
         var recommender = await LoadGamesAsync();
 
         var steamInput = SteamId.Trim();
+        if (!IsValidSteamInput(steamInput))
+        {
+            ModelState.AddModelError(nameof(SteamId), "Enter a SteamID64 or a steamcommunity.com profile URL.");
+            return Page();
+        }
         string steamId;
         try
         {
@@ -188,7 +197,7 @@ public class ProfileModel : PageModel
             ModelState.AddModelError(nameof(SteamId), iex.Message);
             return Page();
         }
-        
+
         // 1) Fetch owned games from Steam
         List<SteamProfileService.OwnedGame> owned;
         try
@@ -221,6 +230,24 @@ public class ProfileModel : PageModel
                 });
 
                 await _interactionRepo.UpsertManyAsync(steamId, docs);
+
+                try
+                {
+                    // Retrain so the current user can get CF recommendations immediately.
+                    var interactions = await _interactionRepo.GetAllAsync();
+                    var rows = interactions.Select(i => (
+                        steamId: i.SteamId,
+                        appId: (uint)i.AppId,
+                        playtimeForever: i.PlaytimeForever,
+                        playtime2Weeks: i.Playtime2Weeks
+                    ));
+
+                    _cf.TrainFromRows(rows);
+                }
+                catch (Exception ex)
+                {
+                    ModelState.AddModelError(string.Empty, "Collaborative model retraining failed: " + ex.Message);
+                }
             }
             catch (Exception ex)
             {
@@ -332,7 +359,7 @@ public class ProfileModel : PageModel
                     Name = r.game.Name,
                     Similarity = r.similarity,
                     OverallScore = r.overallScore,
-                        ReviewTotal = r.game.ReviewTotal,
+                    ReviewTotal = r.game.ReviewTotal,
                     ReviewScoreAdj = r.game.ReviewScoreAdj,
                     ThumbnailUrl = SteamImageHelper.BuildCapsuleUrl(r.game.AppId),
                     PriceEur = r.game.PriceEur,
@@ -402,6 +429,60 @@ public class ProfileModel : PageModel
     private string BuildCacheKey(string steamId)
     {
         return $"profile-recs:{steamId}:{Algorithm}:{ContributeToCollaborative}";
+    }
+
+    private static bool IsValidSteamInput(string input)
+    {
+        if (Regex.IsMatch(input, @"^\d{17}$"))
+        {
+            return true;
+        }
+
+        if (!TryCreateProfileUri(input, out var uri))
+        {
+            return false;
+        }
+
+        var host = uri.Host;
+        if (!host.Equals("steamcommunity.com", StringComparison.OrdinalIgnoreCase)
+            && !host.EndsWith(".steamcommunity.com", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        var segments = uri.AbsolutePath
+            .Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+        if (segments.Length < 2)
+        {
+            return false;
+        }
+
+        if (segments[0].Equals("profiles", StringComparison.OrdinalIgnoreCase))
+        {
+            return Regex.IsMatch(segments[1], @"^\d{17}$");
+        }
+
+        return segments[0].Equals("id", StringComparison.OrdinalIgnoreCase)
+               && !string.IsNullOrWhiteSpace(segments[1]);
+    }
+
+    private static bool TryCreateProfileUri(string input, out Uri uri)
+    {
+        if (Uri.TryCreate(input, UriKind.Absolute, out var parsed) && parsed is not null)
+        {
+            uri = parsed;
+            return true;
+        }
+
+        if (Uri.TryCreate($"https://{input}", UriKind.Absolute, out parsed) && parsed is not null)
+        {
+            uri = parsed;
+            return true;
+        }
+
+        uri = null!;
+        return false;
     }
 
     private class ProfileRecommendationCache

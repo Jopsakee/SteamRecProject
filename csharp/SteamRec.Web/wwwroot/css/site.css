@@ -6,6 +6,9 @@
     background-size: cover;
     background-attachment: fixed;
     color: #c7d5e0;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
 }
 
 .steam-navbar {
@@ -21,6 +24,85 @@
 .steam-main {
     padding-top: 20px;
     padding-bottom: 40px;
+    flex: 1 0 auto;
+}
+
+.steam-footer {
+    background-color: #171a21;
+    border-top: 1px solid #1b2838;
+    padding: 20px 0 12px;
+    margin-top: auto;
+}
+
+.steam-footer-inner {
+    display: grid;
+    gap: 16px;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    align-items: start;
+}
+
+.steam-footer-title {
+    color: #ffffff;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    font-size: 1rem;
+    margin-bottom: 4px;
+}
+
+.steam-footer-note {
+    margin: 0;
+    color: #afc2d5;
+    font-size: 0.88rem;
+}
+
+.steam-footer-heading {
+    color: #ffffff;
+    font-weight: 600;
+    margin-bottom: 6px;
+    font-size: 0.95rem;
+}
+
+.steam-footer-links {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.steam-footer-nav {
+    padding-left: 100px;
+}
+
+.steam-footer-brand {
+    margin-left: 8px;
+}
+
+.steam-footer-link {
+    color: #8fb4d3;
+    text-decoration: none;
+    font-size: 0.88rem;
+}
+
+.steam-footer-link:hover {
+    color: #ffffff;
+    text-decoration: none;
+}
+
+.steam-footer-bottom {
+    position: relative;
+    margin-top: 16px;
+    padding-top: 8px;
+    text-align: center;
+}
+
+.steam-footer-bottom::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 50%;
+    width: min(820px, 70%);
+    height: 1px;
+    transform: translateX(-50%);
+    background-color: rgba(255, 255, 255, 0.2);
 }
 
 .steam-container {
@@ -48,6 +130,43 @@
     border: 1px solid #000000;
 }
 
+.guide-option {
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+    cursor: pointer;
+}
+
+.guide-option:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.6);
+    border-color: rgba(102, 192, 244, 0.6);
+}
+
+.guide-option:focus-visible {
+    outline: 2px solid rgba(102, 192, 244, 0.8);
+    outline-offset: 2px;
+}
+
+.guide-option[aria-pressed="true"] {
+    border-color: rgba(102, 192, 244, 0.9);
+    box-shadow: 0 12px 26px rgba(20, 45, 70, 0.6);
+}
+
+.guide-panel-active {
+    animation: guide-panel-fade 0.35s ease;
+}
+
+@keyframes guide-panel-fade {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
 .steam-btn-primary {
     background-color: #66c0f4;
     border-color: #66c0f4;
@@ -59,13 +178,45 @@
     border-color: #8fceff;
 }
 
-/* Tables in dark cards */
 .table-dark {
     --bs-table-bg: #1b2838;
     --bs-table-striped-bg: #171a21;
     --bs-table-striped-color: #c7d5e0;
     --bs-table-hover-bg: #2a475e;
     --bs-table-hover-color: #ffffff;
+}
+
+.review-table {
+    table-layout: fixed;
+    width: 100%;
+}
+
+.review-table .review-name {
+    width: 45%;
+    overflow-wrap: anywhere;
+}
+
+.review-table .review-count {
+    width: 15%;
+}
+
+.review-table tbody .review-score {
+    width: 100%;
+    white-space: normal;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+}
+
+.review-table tbody .review-score .badge {
+    align-self: flex-start;
+    max-width: 100%;
+    white-space: nowrap;
+}
+
+.review-table .review-percent {
+    line-height: 1.1;
 }
 
 /* Dashboard */
