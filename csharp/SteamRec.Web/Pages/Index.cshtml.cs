@@ -36,7 +36,7 @@ public class IndexModel : PageModel
 
     public async Task OnGetAsync()
     {
-        await LoadGamesAsync();
+        await LoadGameCountAsync();
     }
 
     public async Task<IActionResult> OnPostSearchAsync()
@@ -82,6 +82,11 @@ public class IndexModel : PageModel
         var recommender = await _recommenderProvider.GetContentBasedAsync();
         _games = recommender.Games;
         TotalGames = recommender.GameCount;
+    }
+
+    private async Task LoadGameCountAsync()
+    {
+        TotalGames = await _recommenderProvider.GetGameCountAsync();
     }
 
      private void BuildSearchResults()

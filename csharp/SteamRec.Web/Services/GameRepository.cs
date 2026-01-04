@@ -17,6 +17,15 @@ public class GameRepository
     public Task<List<GameDocument>> GetAllAsync()
         => _games.Find(Builders<GameDocument>.Filter.Empty).ToListAsync();
 
+    public async Task<int> CountAsync(CancellationToken cancellationToken = default)
+    {
+        var count = await _games.CountDocumentsAsync(
+            Builders<GameDocument>.Filter.Empty,
+            cancellationToken: cancellationToken);
+
+        return (int)count;
+    }
+    
     public async IAsyncEnumerable<GameDocument> StreamAllAsync(
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
