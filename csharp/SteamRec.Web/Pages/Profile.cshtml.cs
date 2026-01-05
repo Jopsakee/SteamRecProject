@@ -62,7 +62,7 @@ public class ProfileModel : PageModel
 
     public async Task OnGetAsync()
     {
-        await LoadGamesAsync();
+        await LoadGameCountAsync();
     }
 
     public async Task<IActionResult> OnPostAsync()
@@ -75,13 +75,14 @@ public class ProfileModel : PageModel
         if (string.IsNullOrWhiteSpace(SteamId))
             return Page();
 
-        await LoadGamesAsync();
+        await LoadGameCountAsync();
 
         if (TryRestoreFromCache(pageNumber))
         {
             return Page();
         }
 
+        await LoadGamesAsync();
         return await HandleRequestAsync(pageNumber);
     }
 
@@ -168,6 +169,11 @@ public class ProfileModel : PageModel
         _games = recommender.Games;
         TotalGames = recommender.GameCount;
         return recommender;
+    }
+
+    private async Task LoadGameCountAsync()
+    {
+        TotalGames = await _recommenderProvider.GetGameCountAsync();
     }
 
     private async Task<IActionResult> HandleRequestAsync(int pageNumber)

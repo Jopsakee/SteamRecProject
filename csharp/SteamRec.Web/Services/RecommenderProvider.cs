@@ -8,20 +8,34 @@ namespace SteamRec.Web.Services;
 public interface IRecommenderProvider
 {
     Task<ContentBasedRecommender> GetContentBasedAsync();
+    Task<int> GetGameCountAsync();
 }
 
 public sealed class RecommenderProvider : IRecommenderProvider
 {
     private readonly GameRepository _repository;
     private readonly Lazy<Task<ContentBasedRecommender>> _contentBased;
+    private readonly Lazy<Task<int>> _gameCount;
+    private int _gameCountCache = -1;
 
     public RecommenderProvider(GameRepository repository)
     {
         _repository = repository;
         _contentBased = new Lazy<Task<ContentBasedRecommender>>(LoadContentBasedAsync);
+        _gameCount = new Lazy<Task<int>>(LoadGameCountAsync);
     }
 
     public Task<ContentBasedRecommender> GetContentBasedAsync() => _contentBased.Value;
+
+    public Task<int> GetGameCountAsync()
+    {
+        if (_gameCountCache >= 0)
+        {
+            return Task.FromResult(_gameCountCache);
+        }
+
+        return _gameCount.Value;
+    }
 
     private async Task<ContentBasedRecommender> LoadContentBasedAsync()
     {
@@ -59,9 +73,16 @@ public sealed class RecommenderProvider : IRecommenderProvider
         if (games.Count == 0)
             throw new InvalidOperationException("[SteamRec] MongoDB returned 0 games. Did you import games into the 'games' collection?");
 
+        _gameCountCache = games.Count;
         Console.WriteLine($"[SteamRec] Loaded {games.Count} games from MongoDB.");
 
         return new ContentBasedRecommender(games);
+    }
+
+    private async Task<int> LoadGameCountAsync()
+    {
+        _gameCountCache = await _repository.CountAsync();
+        return _gameCountCache;
     }
 
     private static HashSet<string> SplitSemicolon(string value)
