@@ -67,7 +67,8 @@ public class ProfileModel : PageModel
 
     public async Task<IActionResult> OnPostAsync()
     {
-        return await HandleRequestAsync(1);
+        var recommender = await LoadGamesAsync();
+        return await HandleRequestAsync(recommender, 1, allowCollaborativeRefresh: true);
     }
 
     public async Task<IActionResult> OnPostPageAsync(int pageNumber)
@@ -82,8 +83,8 @@ public class ProfileModel : PageModel
             return Page();
         }
 
-        await LoadGamesAsync();
-        return await HandleRequestAsync(pageNumber);
+        var recommender = await LoadGamesAsync();
+        return await HandleRequestAsync(recommender, pageNumber, allowCollaborativeRefresh: false);
     }
 
     public class OwnedGameViewModel
@@ -176,15 +177,16 @@ public class ProfileModel : PageModel
         TotalGames = await _recommenderProvider.GetGameCountAsync();
     }
 
-    private async Task<IActionResult> HandleRequestAsync(int pageNumber)
+    private async Task<IActionResult> HandleRequestAsync(
+        ContentBasedRecommender recommender,
+        int pageNumber,
+        bool allowCollaborativeRefresh)
     {
         if (string.IsNullOrWhiteSpace(SteamId))
         {
             ModelState.AddModelError(nameof(SteamId), "Enter a SteamID64 or a steamcommunity.com profile URL.");
             return Page();
         }
-        
-        var recommender = await LoadGamesAsync();
 
         var steamInput = SteamId.Trim();
         if (!IsValidSteamInput(steamInput))
@@ -218,7 +220,7 @@ public class ProfileModel : PageModel
         }
 
         // 2) Store interactions if opted-in
-        if (ContributeToCollaborative)
+        if (ContributeToCollaborative && allowCollaborativeRefresh)
         {
             var meaningful = owned
                 .Where(o => o.playtime_forever > 0 || o.playtime_2weeks > 0)
