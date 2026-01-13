@@ -268,3 +268,179 @@ nl -ba /workspace/SteamRecProject/csharp/SteamRec.ML/notebook.ipynb | sed -n '1,
 nl -ba /workspace/SteamRecProject/csharp/SteamRec.ML/notebook.ipynb | sed -n '600,760p'
 nl -ba /workspace/SteamRecProject/csharp/SteamRec.ML/notebook.ipynb | sed -n '980,1070p'
 nl -ba /workspace/SteamRecProject/csharp/SteamRec.ML/notebook.ipynb | sed -n '1070,1140p'
+rg -n "recommend|ALS|content|content-based|game library|collaborative|implicit|matrix" /workspace/SteamRecProject/csharp/SteamRec.ML
+sed -n '1,220p' /workspace/SteamRecProject/csharp/SteamRec.ML/CollaborativeFilteringRecommender.cs
+rg -n "content|Genres|Tags|content-based|similar" /workspace/SteamRecProject/csharp
+python - <<'PY'
+import json
+from pathlib import Path
+
+path = Path('/workspace/SteamRecProject/csharp/SteamRec.ML/notebook.ipynb')
+nb = json.loads(path.read_text())
+
+cells = nb['cells']
+
+def replace_cell_source(match_text, new_source_lines):
+    for cell in cells:
+        if cell.get('cell_type') != 'code':
+            continue
+        source = ''.join(cell.get('source', ''))
+        if match_text in source:
+            cell['source'] = [line if line.endswith('\n') else line + '\n' for line in new_source_lines]
+            return True
+    return False
+
+# Insert model alignment markdown after expectations (or after first markdown if not found)
+insert_idx = None
+for i, c in enumerate(cells):
+    if c.get('cell_type') == 'markdown' and ''.join(c.get('source','')).startswith('## Wat verwachten we?'):
+        insert_idx = i + 1
+        break
+if insert_idx is None:
+    insert_idx = 1
+
+alignment_md = [
+    "## Modellen in de codebase (ML.NET vs. content‑based)\n",
+    "- **SteamRec.ML** gebruikt een *collaborative filtering* model (ML.NET Matrix Factorization) op user‑interacties.\n",
+    "- **SteamRec.Core** bevat een *content‑based* model dat games vergelijkt op metadata (genres/tags/categories + numerieke features)\n",
+    "  en daarna her‑rankt met review‑kwaliteit/populariteit.\n",
+    "\n",
+    "In de notebook evalueren we **beide** modellen afzonderlijk zodat de resultaten aansluiten op de echte code.\n",
+]
+
+cells.insert(insert_idx, {
+    'cell_type': 'markdown',
+    'metadata': {},
+    'source': alignment_md
+})
+
+# Update content-based feature building cell
+new_feature_code = [
+    "from sklearn.preprocessing import MultiLabelBinarizer\n",
+    "from scipy.sparse import csr_matrix, hstack\n",
+    "\n",
+    "# We mirror SteamRec.Core.FeatureBuilder weights\n",
+    "GENRE_BLOCK_WEIGHT = 1.8\n",
+    "TAG_BLOCK_WEIGHT = 2.8\n",
+    "CAT_BLOCK_WEIGHT = 1.2\n",
+    "REVIEW_SCORE_INTERNAL_WEIGHT = 2.0\n",
+    "REVIEW_VOL_INTERNAL_WEIGHT = 1.2\n",
+    "\n",
+    "# Overall re‑ranking weights (ContentBasedRecommender)\n",
+    "W_SIM = 1.8\n",
+    "W_REV = 0.5\n",
+    "W_VOL = 0.6\n",
+    "\n",
+    "# Only keep games that appear in the interactions dataset\n",
+    "active_appids = interactions[\"AppId\"].unique()\n",
+    "games_cb = games[games[\"AppId\"].isin(active_appids)].copy()\n",
+    "\n",
+    "def split_field(val):\n",
+    "    if isinstance(val, str) and val.strip():\n",
+    "        return [x.strip() for x in val.split(\",\") if x.strip()]\n",
+    "    return []\n",
+    "\n",
+    "games_cb[\"genres_list\"] = games_cb[\"Genres\"].apply(split_field)\n",
+    "games_cb[\"tags_list\"] = games_cb[\"Tags\"].apply(split_field)\n",
+    "games_cb[\"categories_list\"] = games_cb[\"Categories\"].apply(split_field)\n",
+    "\n",
+    "mlb_genres = MultiLabelBinarizer(sparse_output=True)\n",
+    "mlb_tags = MultiLabelBinarizer(sparse_output=True)\n",
+    "mlb_categories = MultiLabelBinarizer(sparse_output=True)\n",
+    "\n",
+    "genre_features = mlb_genres.fit_transform(games_cb[\"genres_list\"]).astype(float) * GENRE_BLOCK_WEIGHT\n",
+    "tag_features = mlb_tags.fit_transform(games_cb[\"tags_list\"]).astype(float) * TAG_BLOCK_WEIGHT\n",
+    "cat_features = mlb_categories.fit_transform(games_cb[\"categories_list\"]).astype(float) * CAT_BLOCK_WEIGHT\n",
+    "\n",
+    "numeric_cols = [\"PriceEur\", \"MetacriticScore\", \"ReleaseYear\", \"RequiredAge\", \"IsFree\", \"ReviewScoreAdj\", \"ReviewVolumeLog\"]\n",
+    "numeric_data = games_cb[numeric_cols].fillna(0.0)\n",
+    "\n",
+    "means = numeric_data.mean()\n",
+    "stds = numeric_data.std().replace(0, 1.0)\n",
+    "numeric_z = (numeric_data - means) / stds\n",
+    "numeric_z[\"ReviewScoreAdj\"] *= REVIEW_SCORE_INTERNAL_WEIGHT\n",
+    "numeric_z[\"ReviewVolumeLog\"] *= REVIEW_VOL_INTERNAL_WEIGHT\n",
+    "\n",
+    "numeric_sparse = csr_matrix(numeric_z.values)\n",
+    "content_features = hstack([numeric_sparse, genre_features, tag_features, cat_features], format=\"csr\")\n",
+    "\n",
+    "# Map AppId -> row index for this filtered set\n",
+    "game_index = {appid: i for i, appid in enumerate(games_cb[\"AppId\"])}\n",
+    "\n",
+    "# Min/max for review normalization (ContentBasedRecommender.Normalize)\n",
+    "REV_MIN = games_cb[\"ReviewScoreAdj\"].min()\n",
+    "REV_MAX = games_cb[\"ReviewScoreAdj\"].max()\n",
+    "VOL_MIN = games_cb[\"ReviewVolumeLog\"].min()\n",
+    "VOL_MAX = games_cb[\"ReviewVolumeLog\"].max()\n",
+]
+
+replace_cell_source("from sklearn.preprocessing import MultiLabelBinarizer, StandardScaler", new_feature_code)
+
+# Update content-based recommend function to match ContentBasedRecommender logic
+new_recommend_code = [
+    "from sklearn.metrics.pairwise import cosine_similarity\n",
+    "import numpy as np\n",
+    "\n",
+    "def _normalize(values, min_val, max_val, default):\n",
+    "    if max_val <= min_val:\n",
+    "        return np.full(len(values), default)\n",
+    "    return (values - min_val) / (max_val - min_val)\n",
+    "\n",
+    "def recommend_content_based(user_id, k=10):\n",
+    "    if user_id not in train_rows[\"SteamId\"].values:\n",
+    "        return []\n",
+    "\n",
+    "    user_games = train_rows[train_rows[\"SteamId\"] == user_id][\"AppId\"].tolist()\n",
+    "    user_games = [g for g in user_games if g in game_index]\n",
+    "    if not user_games:\n",
+    "        return []\n",
+    "\n",
+    "    liked_games = games_cb[games_cb[\"AppId\"].isin(user_games)]\n",
+    "    liked_genres_union = set()\n",
+    "    for genres in liked_games[\"genres_list\"]:\n",
+    "        liked_genres_union.update(genres)\n",
+    "\n",
+    "    user_vecs = content_features[[game_index[g] for g in user_games]]\n",
+    "    user_profile = user_vecs.mean(axis=0)\n",
+    "    if hasattr(user_profile, \"A\"):\n",
+    "        user_profile = user_profile.A\n",
+    "\n",
+    "    # candidate filter: exclude known games + require genre overlap if any genres exist\n",
+    "    candidate_mask = ~games_cb[\"AppId\"].isin(user_games)\n",
+    "    if liked_genres_union:\n",
+    "        candidate_mask &= games_cb[\"genres_list\"].apply(lambda gs: bool(set(gs) & liked_genres_union))\n",
+    "\n",
+    "    candidate_idx = np.where(candidate_mask.values)[0]\n",
+    "    if len(candidate_idx) == 0:\n",
+    "        return []\n",
+    "\n",
+    "    sims = cosine_similarity(user_profile, content_features[candidate_idx]).flatten()\n",
+    "\n",
+    "    rev = games_cb.iloc[candidate_idx][\"ReviewScoreAdj\"].fillna(0.0).values\n",
+    "    vol = games_cb.iloc[candidate_idx][\"ReviewVolumeLog\"].fillna(0.0).values\n",
+    "    norm_rev = _normalize(rev, REV_MIN, REV_MAX, 0.5)\n",
+    "    norm_vol = _normalize(vol, VOL_MIN, VOL_MAX, 0.0)\n",
+    "    overall = W_SIM * sims + W_REV * norm_rev + W_VOL * norm_vol\n",
+    "\n",
+    "    top_idx = candidate_idx[np.argsort(-overall)][:k]\n",
+    "    return games_cb.iloc[top_idx][\"AppId\"].tolist()\n",
+]
+
+replace_cell_source("def recommend_content_based", new_recommend_code)
+
+# Update content-based markdown to mention alignment with SteamRec.Core
+for cell in cells:
+    if cell.get('cell_type') == 'markdown' and ''.join(cell.get('source','')).startswith('## Content-based evaluation'):
+        cell['source'] = [
+            "## Content-based evaluation (SteamRec.Core alignment)\n",
+            "We replicate the **SteamRec.Core.ContentBasedRecommender** logic: genre/tag/category features with weighted numeric z-scores,\n",
+            "then re-rank by review score and volume.\n",
+        ]
+        break
+
+nb['cells'] = cells
+path.write_text(json.dumps(nb, indent=1))
+PY
+nl -ba /workspace/SteamRecProject/csharp/SteamRec.ML/notebook.ipynb | sed -n '1,200p'
+nl -ba /workspace/SteamRecProject/csharp/SteamRec.ML/notebook.ipynb | sed -n '930,1100p'
+nl -ba /workspace/SteamRecProject/csharp/SteamRec.ML/notebook.ipynb | sed -n '1100,1185p'
