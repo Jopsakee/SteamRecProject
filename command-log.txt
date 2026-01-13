@@ -1,0 +1,270 @@
+ls
+find .. -name AGENTS.md -print
+ls /workspace/SteamRecProject
+ls /workspace/SteamRecProject/csharp
+ls /workspace/SteamRecProject/csharp/SteamRec.ML
+python - <<'PY'
+import json
+from pathlib import Path
+nb=Path('/workspace/SteamRecProject/csharp/SteamRec.ML/notebook.ipynb')
+nbj=json.loads(nb.read_text())
+for i,cell in enumerate(nbj.get('cells',[]),1):
+    ctype=cell.get('cell_type')
+    source=''.join(cell.get('source',''))
+    print(f'## cell {i} {ctype}')
+    print(source)
+    print('-----')
+PY
+nl -ba /workspace/SteamRecProject/csharp/SteamRec.ML/notebook.ipynb | sed -n '1,260p'
+python - <<'PY'
+import json
+from pathlib import Path
+
+path = Path('/workspace/SteamRecProject/csharp/SteamRec.ML/notebook.ipynb')
+nb = json.loads(path.read_text())
+
+cells = nb['cells']
+
+# Helper to create cells
+
+def md_cell(text):
+    return {
+        "cell_type": "markdown",
+        "metadata": {},
+        "source": [line if line.endswith("\n") else line + "\n" for line in text.splitlines()]
+    }
+
+def code_cell(code):
+    return {
+        "cell_type": "code",
+        "execution_count": None,
+        "metadata": {},
+        "outputs": [],
+        "source": [line if line.endswith("\n") else line + "\n" for line in code.splitlines()]
+    }
+
+# Insert expectations section after first markdown cell (index 0)
+insert_idx = 1
+expectations = md_cell(
+"""## Wat verwachten we?
+We willen aantonen dat het recommender‑systeem:
+- **Consistente kwaliteit** levert op ranking‑metrics (Precision@K/Recall@K/NDCG@K).
+- **Beter presteert dan een eenvoudige baseline** (popularity).
+- **Stabiel** is over verschillende train/test splits (cross‑validation) zodat we niet over‑fitten op één split.
+
+**Succescriteria (indicatief):**
+- Model > baseline op NDCG@10 en Recall@10.
+- Verschil is **herhaalbaar** over CV‑folds (geen toevals‑uitschieters).
+"""
+)
+
+cells.insert(insert_idx, expectations)
+
+# Find index after train/test split section (markdown that starts with '## Train/Test Split')
+train_split_idx = next(i for i,c in enumerate(cells) if c.get('cell_type')=='markdown' and ''.join(c.get('source','')).startswith('## Train/Test Split'))
+
+# Insert cross-validation section after train/test split code cell (train_split_idx+2)
+cv_insert_idx = train_split_idx + 2
+
+cv_md = md_cell(
+"""## Cross‑validation (user‑based)
+Voor recommender‑systemen is klassieke k‑fold CV lastig omdat gebruikersinteracties niet onafhankelijk zijn.
+We gebruiken daarom **user‑based splits** (leave‑one‑out per user) en herhalen dit meerdere keren door de test‑interactie te variëren.
+"""
+)
+
+cv_code = code_cell(
+"""def build_train_test_leave_one_out(df, random_state=None):
+    # Randomize within user to get a different held‑out item each run
+    df = df.sample(frac=1.0, random_state=random_state).sort_values("SteamId")
+    test = df.groupby("SteamId").head(1)
+    train = df.drop(test.index)
+    return train, test
+
+# Simple repeated evaluation (lightweight CV proxy)
+cv_scores = []
+for seed in [1, 7, 21]:
+    train_rows_cv, test_rows_cv = build_train_test_leave_one_out(interactions, random_state=seed)
+
+    # build matrix for CV split
+    user_ids_cv = train_rows_cv["SteamId"].unique()
+    item_ids_cv = train_rows_cv["AppId"].unique()
+    user_index_cv = {u:i for i,u in enumerate(user_ids_cv)}
+    item_index_cv = {a:i for i,a in enumerate(item_ids_cv)}
+    inv_item_index_cv = {i:a for a,i in item_index_cv.items()}
+
+    tmp = train_rows_cv.copy()
+    tmp["u_idx"] = tmp["SteamId"].map(user_index_cv)
+    tmp["i_idx"] = tmp["AppId"].map(item_index_cv)
+    matrix_cv = csr_matrix(
+        (tmp["implicit_rating"], (tmp["u_idx"], tmp["i_idx"])),
+        shape=(len(user_ids_cv), len(item_ids_cv))
+    )
+
+    model_cv = AlternatingLeastSquares(factors=64, regularization=0.05, iterations=20)
+    model_cv.fit(matrix_cv)
+
+    def recommend_tmp(user_id, k=10):
+        if user_id not in user_index_cv:
+            return []
+        uid = user_index_cv[user_id]
+        ids, scores = model_cv.recommend(uid, matrix_cv[uid], N=k)
+        return [inv_item_index_cv[int(i)] for i in ids if int(i) in inv_item_index_cv]
+
+    # override global test_rows for evaluation
+    old_test = test_rows
+    test_rows = test_rows_cv
+    scores = evaluate_model(recommend_tmp, k=10)
+    cv_scores.append(scores)
+    test_rows = old_test
+
+cv_scores"""
+)
+
+cells.insert(cv_insert_idx, cv_md)
+cells.insert(cv_insert_idx + 1, cv_code)
+
+# Insert metrics note for MAE/RMSE after evaluation metrics markdown
+metrics_idx = next(i for i,c in enumerate(cells) if c.get('cell_type')=='markdown' and ''.join(c.get('source','')).startswith('## Evaluation Metrics'))
+mae_md = md_cell(
+"""### Waarom geen MAE/RMSE?
+MAE/RMSE zijn **regressiemetrics** voor expliciete ratings. In dit project gebruiken we **implicit feedback** (playtime‑signaal),
+waardoor ranking‑metrics (Precision/Recall/NDCG) beter passen. MAE/RMSE zouden hier weinig betekenis hebben zonder expliciete ratings.
+"""
+)
+
+cells.insert(metrics_idx + 1, mae_md)
+
+# Insert forecasting/trend support section near content-based evaluation (after content-based eval)
+content_eval_idx = next(i for i,c in enumerate(cells) if c.get('cell_type')=='markdown' and ''.join(c.get('source','')).startswith('## Evaluate content-based model'))
+forecast_md = md_cell(
+"""## Forecasting‑gebaseerde aanbevelingen (seizoens‑trends)
+We hebben **geen voldoende rijke tijdreeks** (bv. maandelijkse activiteit per game) om betrouwbare seizoens‑/trendmodellen te trainen.
+De huidige dataset bevat vooral totale playtime + 2‑weeks playtime; dit is niet genoeg voor klassieke forecasting.
+
+**Wat kan later wél?**
+- Aggregatie naar maand/week en forecasting per genre of game.
+- Trends gebruiken als extra feature in de ranking ("recent popularity boost").
+"""
+)
+
+cells.insert(content_eval_idx + 2, forecast_md)
+
+nb['cells'] = cells
+path.write_text(json.dumps(nb, indent=1))
+PY
+python - <<'PY'
+import json
+from pathlib import Path
+
+path = Path('/workspace/SteamRecProject/csharp/SteamRec.ML/notebook.ipynb')
+nb = json.loads(path.read_text())
+
+cells = nb['cells']
+
+# Remove existing CV section if present
+new_cells = []
+skip = False
+for c in cells:
+    if c.get('cell_type') == 'markdown' and ''.join(c.get('source','')).startswith('## Cross‑validation'):
+        skip = True
+        continue
+    if skip:
+        # skip the next code cell after the markdown
+        if c.get('cell_type') == 'code':
+            skip = False
+        continue
+    new_cells.append(c)
+
+cells = new_cells
+
+# Helper to create cells
+
+def md_cell(text):
+    return {
+        "cell_type": "markdown",
+        "metadata": {},
+        "source": [line if line.endswith("\n") else line + "\n" for line in text.splitlines()]
+    }
+
+def code_cell(code):
+    return {
+        "cell_type": "code",
+        "execution_count": None,
+        "metadata": {},
+        "outputs": [],
+        "source": [line if line.endswith("\n") else line + "\n" for line in code.splitlines()]
+    }
+
+# Insert CV section after evaluation loop code cell
+loop_idx = next(i for i,c in enumerate(cells) if c.get('cell_type')=='markdown' and ''.join(c.get('source','')).startswith('## Evaluation loop'))
+cv_insert_idx = loop_idx + 2
+
+cv_md = md_cell(
+"""## Cross‑validation (user‑based)
+Voor recommender‑systemen is klassieke k‑fold CV lastig omdat gebruikersinteracties niet onafhankelijk zijn.
+We gebruiken daarom **user‑based splits** (leave‑one‑out per user) en herhalen dit meerdere keren door de test‑interactie te variëren.
+"""
+)
+
+cv_code = code_cell(
+"""from implicit.als import AlternatingLeastSquares
+
+
+def build_train_test_leave_one_out(df, random_state=None):
+    # Randomize within user to get a different held‑out item each run
+    df = df.sample(frac=1.0, random_state=random_state).sort_values("SteamId")
+    test = df.groupby("SteamId").head(1)
+    train = df.drop(test.index)
+    return train, test
+
+# Simple repeated evaluation (lightweight CV proxy)
+cv_scores = []
+for seed in [1, 7, 21]:
+    train_rows_cv, test_rows_cv = build_train_test_leave_one_out(interactions, random_state=seed)
+
+    # build matrix for CV split
+    user_ids_cv = train_rows_cv["SteamId"].unique()
+    item_ids_cv = train_rows_cv["AppId"].unique()
+    user_index_cv = {u:i for i,u in enumerate(user_ids_cv)}
+    item_index_cv = {a:i for i,a in enumerate(item_ids_cv)}
+    inv_item_index_cv = {i:a for a,i in item_index_cv.items()}
+
+    tmp = train_rows_cv.copy()
+    tmp["u_idx"] = tmp["SteamId"].map(user_index_cv)
+    tmp["i_idx"] = tmp["AppId"].map(item_index_cv)
+    matrix_cv = csr_matrix(
+        (tmp["implicit_rating"], (tmp["u_idx"], tmp["i_idx"])),
+        shape=(len(user_ids_cv), len(item_ids_cv))
+    )
+
+    model_cv = AlternatingLeastSquares(factors=64, regularization=0.05, iterations=10)
+    model_cv.fit(matrix_cv)
+
+    def recommend_cv(user_id, k=10):
+        if user_id not in user_index_cv:
+            return []
+        uid = user_index_cv[user_id]
+        ids, scores = model_cv.recommend(uid, matrix_cv[uid], N=k)
+        return [inv_item_index_cv[int(i)] for i in ids if int(i) in inv_item_index_cv]
+
+    # evaluate on this split
+    old_test = test_rows
+    test_rows = test_rows_cv
+    scores = evaluate_model(recommend_cv, k=10)
+    cv_scores.append(scores)
+    test_rows = old_test
+
+cv_scores"""
+)
+
+cells.insert(cv_insert_idx, cv_md)
+cells.insert(cv_insert_idx + 1, cv_code)
+
+nb['cells'] = cells
+path.write_text(json.dumps(nb, indent=1))
+PY
+nl -ba /workspace/SteamRecProject/csharp/SteamRec.ML/notebook.ipynb | sed -n '1,160p'
+nl -ba /workspace/SteamRecProject/csharp/SteamRec.ML/notebook.ipynb | sed -n '600,760p'
+nl -ba /workspace/SteamRecProject/csharp/SteamRec.ML/notebook.ipynb | sed -n '980,1070p'
+nl -ba /workspace/SteamRecProject/csharp/SteamRec.ML/notebook.ipynb | sed -n '1070,1140p'
